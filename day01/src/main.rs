@@ -12,11 +12,11 @@ fn part1(input: &[i32]) -> i32 {
     let mut last: i32 = input[0];
     let mut increased = 0;
 
-    for x in input {
-        if last < *x{
+    for &x in input {
+        if last < x{
             increased += 1;
         }
-        last = *x;
+        last = x;
     }
 
     increased
