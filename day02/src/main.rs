@@ -1,16 +1,18 @@
-use anyhow::Result;
 use std::str::FromStr;
+
+use anyhow::Result;
 use itertools::Itertools;
-use crate::Record::{DOWN, UP, FORWARD};
+
+use crate::Motion::{DOWN, FORWARD, UP};
 
 #[derive(Debug)]
-enum Record {
+enum Motion {
     FORWARD(i32),
     UP(i32),
     DOWN(i32),
 }
 
-impl FromStr for Record {
+impl FromStr for Motion {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -32,42 +34,49 @@ impl FromStr for Record {
 #[derive(Debug)]
 struct Submarine {
     depth: i32,
-    horiz: i32
+    horiz: i32,
+    aim: i32,
 }
 
 impl Submarine {
     fn new() -> Submarine {
         Submarine {
             depth: 0,
-            horiz: 0
+            horiz: 0,
+            aim: 0,
         }
     }
 
-    fn go(&mut self, motion: &Record) {
+    fn step(&mut self, motion: &Motion) {
         match motion {
             FORWARD(d) => {
                 self.horiz += d;
+                self.depth += self.aim * d;
             }
             UP(d) => {
-                self.depth -= d;
+                self.aim -= d;
             }
             DOWN(d) => {
-                self.depth += d;
+                self.aim += d;
             }
+        }
+    }
+
+    fn follow(&mut self, motions: &[Motion]) {
+        for m in motions {
+            self.step(m);
         }
     }
 }
 
 fn main() -> Result<()> {
-    let input: Vec<Record> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
+    let input: Vec<Motion> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
     let mut sub = Submarine::new();
-    for motion in input.iter() {
-        sub.go(motion);
-    }
+    sub.follow(&input);
     dbg!(&sub);
 
-    println!("part1 {}", sub.horiz * sub.depth);
+    println!("part2 {}", sub.horiz * sub.depth);
 
     Ok(())
 }
