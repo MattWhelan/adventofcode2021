@@ -13,7 +13,7 @@ fn part1(input: &[i32]) -> i32 {
     let mut increased = 0;
 
     for &x in input {
-        if last < x{
+        if last < x {
             increased += 1;
         }
         last = x;
@@ -28,7 +28,7 @@ fn part2(input: &[i32]) -> i32 {
 
     for xs in input.windows(3) {
         let x = xs.iter().sum();
-        if last < x{
+        if last < x {
             increased += 1;
         }
         last = x;

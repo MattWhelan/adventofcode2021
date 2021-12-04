@@ -22,7 +22,7 @@ impl FromStr for Motion {
                 "forward" => FORWARD(d),
                 "up" => UP(d),
                 "down" => DOWN(d),
-                _ => panic!("Unexpected input")
+                _ => panic!("Unexpected input"),
             };
             Ok(rec)
         } else {

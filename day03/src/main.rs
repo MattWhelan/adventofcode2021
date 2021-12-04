@@ -13,7 +13,10 @@ impl FromStr for Record {
 }
 
 fn main() -> Result<()> {
-    let input: Vec<u32> = INPUT.lines().map(|l| u32::from_str_radix(l, 2).unwrap()).collect();
+    let input: Vec<u32> = INPUT
+        .lines()
+        .map(|l| u32::from_str_radix(l, 2).unwrap())
+        .collect();
     let bits = INPUT.lines().map(|s| s.len()).max().unwrap();
     let mut one_counts: Vec<usize> = Vec::new();
     for i in 0..bits {
@@ -59,8 +62,12 @@ fn part2(bits: usize, input: &[u32]) {
     for i in 0..bits {
         let pos = bits - 1 - i;
         let ones_count = oxy.iter().filter(|x| *x & (1 << pos) != 0).count();
-        let non_zero = ones_count*2 >= oxy.len();
-        oxy = oxy.iter().filter(|x: &&u32| bit_match(**x, pos, non_zero)).copied().collect();
+        let non_zero = ones_count * 2 >= oxy.len();
+        oxy = oxy
+            .iter()
+            .filter(|x: &&u32| bit_match(**x, pos, non_zero))
+            .copied()
+            .collect();
         if oxy.len() == 1 {
             break;
         }
@@ -71,7 +78,11 @@ fn part2(bits: usize, input: &[u32]) {
         let pos = bits - 1 - i;
         let ones_count = co2.iter().filter(|x| *x & (1 << pos) != 0).count();
         let non_zero = ones_count * 2 < co2.len();
-        co2 = co2.iter().filter(|x| bit_match(**x, pos, non_zero)).copied().collect();
+        co2 = co2
+            .iter()
+            .filter(|x| bit_match(**x, pos, non_zero))
+            .copied()
+            .collect();
         if co2.len() == 1 {
             break;
         }
