@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use anyhow::Result;
-use std::str::FromStr;
 use itertools::Itertools;
+use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone)]
 struct Vent {
@@ -67,12 +67,17 @@ impl FromStr for Vent {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (start_str, end_str) = s.split(" -> ").collect_tuple().unwrap();
-        let start = start_str.split(",").map(|s| s.parse::<i64>().unwrap()).collect_tuple().unwrap();
-        let end = end_str.split(",").map(|s| s.parse::<i64>().unwrap()).collect_tuple().unwrap();
-        Ok(Vent {
-            start,
-            end
-        })
+        let start = start_str
+            .split(",")
+            .map(|s| s.parse::<i64>().unwrap())
+            .collect_tuple()
+            .unwrap();
+        let end = end_str
+            .split(",")
+            .map(|s| s.parse::<i64>().unwrap())
+            .collect_tuple()
+            .unwrap();
+        Ok(Vent { start, end })
     }
 }
 
@@ -89,7 +94,8 @@ fn main() -> Result<()> {
 fn part1(input: &[Vent]) {
     let orthos: Vec<Vent> = input.iter().filter(|v| v.is_ortho()).copied().collect();
 
-    let point_counts: HashMap<(i64, i64), usize> = orthos.iter()
+    let point_counts: HashMap<(i64, i64), usize> = orthos
+        .iter()
         .flat_map(|v| v.ortho_points())
         .fold(HashMap::new(), |mut acc, pt| {
             let e = acc.entry(pt).or_insert(0);
@@ -102,13 +108,15 @@ fn part1(input: &[Vent]) {
 }
 
 fn part2(input: &[Vent]) {
-    let point_counts: HashMap<(i64, i64), usize> = input.iter()
-        .flat_map(|v| v.all_points())
-        .fold(HashMap::new(), |mut acc, pt| {
-            let e = acc.entry(pt).or_insert(0);
-            *e += 1;
-            acc
-        });
+    let point_counts: HashMap<(i64, i64), usize> =
+        input
+            .iter()
+            .flat_map(|v| v.all_points())
+            .fold(HashMap::new(), |mut acc, pt| {
+                let e = acc.entry(pt).or_insert(0);
+                *e += 1;
+                acc
+            });
 
     let overlap_count = point_counts.iter().filter(|(_, c)| **c >= 2).count();
     println!("Part2: {}", overlap_count);

@@ -17,13 +17,11 @@ impl BingoBoard {
     }
 
     fn mark_num(&mut self, n: u32) -> Option<(usize, usize)> {
-        let maybe_pos = self.grid.iter()
-            .enumerate()
-            .find_map(|(i, row)| {
-                row.iter()
-                    .enumerate()
-                    .find_map(|(j, &x)| if x == n { Some((i, j)) } else { None })
-            });
+        let maybe_pos = self.grid.iter().enumerate().find_map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .find_map(|(j, &x)| if x == n { Some((i, j)) } else { None })
+        });
         if let Some(pos) = maybe_pos {
             self.marks.push(pos);
         }
@@ -34,7 +32,9 @@ impl BingoBoard {
         let height = self.grid.len();
         let width = self.grid[0].len();
 
-        let rows = self.marks.iter()
+        let rows = self
+            .marks
+            .iter()
             .fold(vec![Vec::new(); height], |mut v, &pos| {
                 v[pos.0].push(pos);
                 v
@@ -43,7 +43,9 @@ impl BingoBoard {
         if let Some(row) = row_win {
             Some(row.iter().map(|&(i, j)| self.grid[i][j]).collect())
         } else {
-            let cols = self.marks.iter()
+            let cols = self
+                .marks
+                .iter()
                 .fold(vec![Vec::new(); width], |mut v, &pos| {
                     v[pos.1].push(pos);
                     v

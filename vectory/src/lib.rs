@@ -2,14 +2,12 @@ use std::ops::{Add, Index, Mul, Sub};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct IntVector<const D: usize> {
-    xs: [i64; D]
+    xs: [i64; D],
 }
 
-impl <const D: usize> From<[i64; D]> for IntVector<D> {
+impl<const D: usize> From<[i64; D]> for IntVector<D> {
     fn from(src: [i64; D]) -> Self {
-        IntVector {
-            xs: src
-        }
+        IntVector { xs: src }
     }
 }
 
@@ -34,7 +32,9 @@ impl<const D: usize> Add for IntVector<D> {
 }
 
 pub trait Vector<T>
-    where T: Default + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + PartialOrd<T> + Copy {
+where
+    T: Default + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + PartialOrd<T> + Copy,
+{
     const DIMS: usize;
 
     fn at(&self, d: usize) -> T;
@@ -63,7 +63,7 @@ pub trait Vector<T>
     }
 }
 
-impl <const D: usize> Vector<i64> for IntVector<D> {
+impl<const D: usize> Vector<i64> for IntVector<D> {
     const DIMS: usize = D;
 
     fn at(&self, d: usize) -> i64 {
