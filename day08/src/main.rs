@@ -1,12 +1,12 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
-use std::str::FromStr;
 use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 #[derive(Debug)]
 struct Record {
     alphabet: HashSet<String>,
-    message: Vec<String>
+    message: Vec<String>,
 }
 
 fn sort_str(s: &str) -> String {
@@ -22,31 +22,37 @@ impl FromStr for Record {
         let (alpha, mess): (&str, &str) = s.split(" | ").collect_tuple().unwrap();
         let alphabet = alpha.split_whitespace().map(sort_str).collect();
         let message = mess.split_whitespace().map(sort_str).collect();
-        Ok(Record {
-            alphabet,
-            message
-        })
+        Ok(Record { alphabet, message })
     }
 }
 
 fn main() -> Result<()> {
     let input: Vec<Record> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    let p1: usize = input.iter()
-        .map(|r| r.message.iter()
-            .filter(|digit| {
-                [2 as usize, 4, 3, 7].contains(&digit.len())
-            })
-            .count())
+    let p1: usize = input
+        .iter()
+        .map(|r| {
+            r.message
+                .iter()
+                .filter(|digit| [2 as usize, 4, 3, 7].contains(&digit.len()))
+                .count()
+        })
         .sum();
 
     println!("Part 1: {}", p1);
 
-    let nums: Vec<u32> = input.iter()
+    let nums: Vec<u32> = input
+        .iter()
         .map(|r| {
             let dict: HashMap<String, char> = crack(&r.alphabet);
-            r.message.iter().map(|s| dict[s]).collect::<String>().parse().unwrap()
-        }).collect();
+            r.message
+                .iter()
+                .map(|s| dict[s])
+                .collect::<String>()
+                .parse()
+                .unwrap()
+        })
+        .collect();
 
     println!("Part 2: {}", nums.iter().sum::<u32>());
     Ok(())
@@ -55,95 +61,113 @@ fn main() -> Result<()> {
 fn crack(alphabet: &HashSet<String>) -> HashMap<String, char> {
     let mut ret = HashMap::new();
 
-    let one: String = alphabet.iter()
+    let one: String = alphabet
+        .iter()
         .filter(|s| s.len() == 2)
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     let one_set: HashSet<char> = one.chars().collect();
     ret.insert(one, '1');
 
-    let four: String = alphabet.iter()
+    let four: String = alphabet
+        .iter()
         .filter(|s| s.len() == 4)
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     let four_set = HashSet::from_iter(four.chars());
     ret.insert(four, '4');
 
-    let seven: String = alphabet.iter()
+    let seven: String = alphabet
+        .iter()
         .filter(|s| s.len() == 3)
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(seven, '7');
 
-    let eight: String = alphabet.iter()
+    let eight: String = alphabet
+        .iter()
         .filter(|s| s.len() == 7)
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(eight, '8');
 
-    let three: String = alphabet.iter()
+    let three: String = alphabet
+        .iter()
         .filter(|s| s.len() == 5)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             chs.is_superset(&one_set)
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(three.clone(), '3');
 
-    let two: String = alphabet.iter()
+    let two: String = alphabet
+        .iter()
         .filter(|s| s.len() == 5)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             four_set.difference(&chs).count() == 2
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(two, '2');
 
-    let five: String = alphabet.iter()
+    let five: String = alphabet
+        .iter()
         .filter(|s| s.len() == 5 && s != &&three)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             four_set.difference(&chs).count() == 1
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(five, '5');
 
-    let six: String = alphabet.iter()
+    let six: String = alphabet
+        .iter()
         .filter(|s| s.len() == 6)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             !chs.is_superset(&one_set)
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(six, '6');
 
-    let nine: String = alphabet.iter()
+    let nine: String = alphabet
+        .iter()
         .filter(|s| s.len() == 6)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             chs.is_superset(&one_set) && chs.is_superset(&four_set)
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(nine, '9');
 
-    let zero: String = alphabet.iter()
+    let zero: String = alphabet
+        .iter()
         .filter(|s| s.len() == 6)
         .filter(|s| {
             let chs = HashSet::from_iter(s.chars());
             chs.is_superset(&one_set) && !chs.is_superset(&four_set)
         })
         .cloned()
-        .next().unwrap();
+        .next()
+        .unwrap();
     ret.insert(zero, '0');
 
-    if ret.len() < 10 {
-        dbg!(&alphabet, &ret);
-    }
+    assert_eq!(10, ret.len(), "Alphabet: {:?}, dict: {:?}", &alphabet, &ret);
 
     ret
 }

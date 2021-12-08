@@ -25,7 +25,8 @@ fn main() -> Result<()> {
 }
 
 fn part1(input: &[i32], min: &i32, max: &i32) {
-    let best = (*min..=*max).map(|p| (input.iter().map(|x| (x - p).abs()).sum::<i32>(), p))
+    let best = (*min..=*max)
+        .map(|p| (input.iter().map(|x| (x - p).abs()).sum::<i32>(), p))
         .min_by_key(|(f, _)| *f);
 
     if let Some((f, _)) = best {
@@ -36,10 +37,13 @@ fn part1(input: &[i32], min: &i32, max: &i32) {
 fn part2(input: &[i32], min: &i32, max: &i32) {
     let best = (*min..=*max)
         .map(|p| {
-            let f = input.iter().map(|x| {
-                let n = (x - p).abs();
-                n * (n+1) / 2
-            }).sum::<i32>();
+            let f = input
+                .iter()
+                .map(|x| {
+                    let n = (x - p).abs();
+                    n * (n + 1) / 2
+                })
+                .sum::<i32>();
             (f, p)
         })
         .min_by_key(|(f, _)| *f);
