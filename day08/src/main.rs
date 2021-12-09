@@ -59,114 +59,55 @@ fn main() -> Result<()> {
 }
 
 fn crack(alphabet: &HashSet<String>) -> HashMap<String, char> {
-    let mut ret = HashMap::new();
+    let mut one_set: HashSet<char> = HashSet::new();
+    let mut four_set: HashSet<char> = HashSet::new();
 
-    let one: String = alphabet
+    let mut ret: HashMap<String, char> = alphabet
         .iter()
-        .filter(|s| s.len() == 2)
-        .cloned()
-        .next()
-        .unwrap();
-    let one_set: HashSet<char> = one.chars().collect();
-    ret.insert(one, '1');
-
-    let four: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 4)
-        .cloned()
-        .next()
-        .unwrap();
-    let four_set = HashSet::from_iter(four.chars());
-    ret.insert(four, '4');
-
-    let seven: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 3)
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(seven, '7');
-
-    let eight: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 7)
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(eight, '8');
-
-    let three: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 5)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            chs.is_superset(&one_set)
+        .filter(|s| [2, 3, 4, 7].contains(&s.len()))
+        .map(|s| match s.len() {
+            2 => {
+                one_set.extend(s.chars());
+                (s.clone(), '1')
+            }
+            3 => (s.clone(), '7'),
+            4 => {
+                four_set.extend(s.chars());
+                (s.clone(), '4')
+            }
+            7 => (s.clone(), '8'),
+            _ => panic!("Filter error"),
         })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(three.clone(), '3');
+        .collect();
 
-    let two: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 5)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            four_set.difference(&chs).count() == 2
-        })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(two, '2');
-
-    let five: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 5 && s != &&three)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            four_set.difference(&chs).count() == 1
-        })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(five, '5');
-
-    let six: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 6)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            !chs.is_superset(&one_set)
-        })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(six, '6');
-
-    let nine: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 6)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            chs.is_superset(&one_set) && chs.is_superset(&four_set)
-        })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(nine, '9');
-
-    let zero: String = alphabet
-        .iter()
-        .filter(|s| s.len() == 6)
-        .filter(|s| {
-            let chs = HashSet::from_iter(s.chars());
-            chs.is_superset(&one_set) && !chs.is_superset(&four_set)
-        })
-        .cloned()
-        .next()
-        .unwrap();
-    ret.insert(zero, '0');
-
+    ret.extend(
+        alphabet
+            .iter()
+            .filter(|s| [5, 6].contains(&s.len()))
+            .map(|s| match s.len() {
+                5 => {
+                    let chs = HashSet::from_iter(s.chars());
+                    if chs.is_superset(&one_set) {
+                        (s.clone(), '3')
+                    } else if four_set.difference(&chs).count() == 1 {
+                        (s.clone(), '5')
+                    } else {
+                        (s.clone(), '2')
+                    }
+                }
+                6 => {
+                    let chs = HashSet::from_iter(s.chars());
+                    if !chs.is_superset(&one_set) {
+                        (s.clone(), '6')
+                    } else if chs.is_superset(&four_set) {
+                        (s.clone(), '9')
+                    } else {
+                        (s.clone(), '0')
+                    }
+                }
+                _ => panic!("Filter error"),
+            }),
+    );
     assert_eq!(10, ret.len(), "Alphabet: {:?}, dict: {:?}", &alphabet, &ret);
 
     ret
