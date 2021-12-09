@@ -1,21 +1,20 @@
+use anyhow::Result;
 use std::collections::HashSet;
 use std::ops::Index;
-use anyhow::Result;
 use std::str::FromStr;
 
 #[derive(Debug)]
-struct HeightField{
-    grid: Vec<Vec<u32>>
+struct HeightField {
+    grid: Vec<Vec<u32>>,
 }
 
 impl FromStr for HeightField {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let grid = s.lines()
-            .map(|l| l.chars()
-                .map(|ch| ch.to_digit(10).unwrap())
-                .collect())
+        let grid = s
+            .lines()
+            .map(|l| l.chars().map(|ch| ch.to_digit(10).unwrap()).collect())
             .collect();
         Ok(HeightField { grid })
     }
@@ -30,71 +29,64 @@ impl Index<(usize, usize)> for HeightField {
 }
 
 impl HeightField {
-    fn low_points<'a>(&'a self) -> impl Iterator<Item=(usize, usize)> + 'a {
-        let height = self.grid.len();
-        let width = self.grid[0].len();
-
-        (0..height).flat_map(move |y| (0..width).filter_map(move |x| {
-            const HIGH: u32 = 10;
-            let up = if y > 0 {
-                self[(x,y-1)]
-            } else { HIGH };
-            let left = if x > 0 {
-                self[(x-1, y)]
-            } else { HIGH };
-            let right = if x < width-1 {
-                self[(x+1, y)]
-            } else { HIGH };
-            let down = if y < height-1 {
-                self[(x, y+1)]
-            } else { HIGH };
-
-            let a = self[(x,y)];
-
-            if a < up && a < left && a < right && a < down {
-                Some((x, y))
-            } else {
-                None
-            }
-        }))
-    }
-
-    fn basin(&self, (x, y): (usize, usize)) -> HashSet<(usize,usize)> {
-        let here = self[(x,y)];
-
-        let mut ret = HashSet::new();
-        ret.insert((x,y));
-
+    fn neighbors(&self, (x, y): (usize, usize)) -> Vec<(usize, usize)> {
+        let mut ret = Vec::new();
         if y > 0 {
-            let p = (x, y-1);
-            let step = self[p];
-            if step > here && step < 9 {
-                ret.extend(self.basin(p));
-            }
+            ret.push((x, y - 1));
         }
+
         if x > 0 {
-            let p = (x-1, y);
-            let step = self[p];
-            if step > here && step < 9 {
-                ret.extend(self.basin(p));
-            }
+            ret.push((x - 1, y));
         }
-        if x < self.grid[0].len()-1 {
-            let p = (x+1, y);
-            let step = self[p];
-            if step > here && step < 9 {
-                ret.extend(self.basin(p));
-            }
+
+        if y < self.grid.len() - 1 {
+            ret.push((x, y + 1));
         }
-        if y < self.grid.len()-1 {
-            let p = (x, y+1);
-            let step = self[p];
-            if step > here && step < 9 {
-                ret.extend(self.basin(p));
-            }
+
+        if x < self.grid[0].len() - 1 {
+            ret.push((x + 1, y));
         }
 
         ret
+    }
+
+    pub fn low_points<'a>(&'a self) -> impl Iterator<Item = (usize, usize)> + 'a {
+        let height = self.grid.len();
+        let width = self.grid[0].len();
+
+        (0..height).flat_map(move |y| {
+            (0..width).filter_map(move |x| {
+                if let Some(min_neighbor) = self.neighbors((x, y)).iter().map(|&p| self[p]).min() {
+                    if self[(x, y)] < min_neighbor {
+                        Some((x, y))
+                    } else {
+                        None
+                    }
+                } else {
+                    Some((x, y))
+                }
+            })
+        })
+    }
+
+    pub fn basin(&self, p: (usize, usize)) -> HashSet<(usize, usize)> {
+        let mut ret = HashSet::new();
+
+        self.basin_internal(p, &mut ret);
+
+        ret
+    }
+
+    fn basin_internal(&self, p: (usize, usize), basin_set: &mut HashSet<(usize, usize)>) {
+        if self[p] < 9 {
+            basin_set.insert(p);
+
+            for n in self.neighbors(p) {
+                if !basin_set.contains(&n) {
+                    self.basin_internal(n, basin_set);
+                }
+            }
+        }
     }
 }
 
@@ -104,10 +96,7 @@ fn main() -> Result<()> {
     let risk = input.low_points().map(|p| input[p] + 1).sum::<u32>();
     println!("Part 1: {}", risk);
 
-    let mut basins: Vec<usize> = input.low_points()
-        .map(|p| input.basin(p).len())
-        .collect();
-
+    let mut basins: Vec<usize> = input.low_points().map(|p| input.basin(p).len()).collect();
     basins.sort();
     basins.reverse();
 
