@@ -1,14 +1,12 @@
 use anyhow::Result;
 
 struct Checker {
-    stack: Vec<char>
+    stack: Vec<char>,
 }
 
 impl Checker {
     fn new() -> Checker {
-        Checker {
-            stack: Vec::new()
-        }
+        Checker { stack: Vec::new() }
     }
 
     fn check(&mut self, s: &str) -> Result<(), (char, usize)> {
@@ -16,11 +14,13 @@ impl Checker {
         for ch in s.chars() {
             match ch {
                 '(' | '[' | '{' | '<' => self.stack.push(ch),
-                ')' | ']' | '}' | '>' => if Checker::closer(self.stack[self.stack.len()-1]) == ch {
-                    self.stack.pop();
-                } else {
-                    return Err((ch, pos))
-                },
+                ')' | ']' | '}' | '>' => {
+                    if Checker::closer(self.stack[self.stack.len() - 1]) == ch {
+                        self.stack.pop();
+                    } else {
+                        return Err((ch, pos));
+                    }
+                }
                 _ => panic!("Invalid char {}", ch),
             }
             pos += 1;
@@ -33,11 +33,13 @@ impl Checker {
         for (pos, ch) in s.chars().enumerate() {
             match ch {
                 '(' | '[' | '{' | '<' => self.stack.push(ch),
-                ')' | ']' | '}' | '>' => if Checker::closer(self.stack[self.stack.len()-1]) == ch {
-                    self.stack.pop();
-                } else {
-                    panic!("Check failed at {} at {}", ch, pos)
-                },
+                ')' | ']' | '}' | '>' => {
+                    if Checker::closer(self.stack[self.stack.len() - 1]) == ch {
+                        self.stack.pop();
+                    } else {
+                        panic!("Check failed at {} at {}", ch, pos)
+                    }
+                }
                 _ => panic!("Invalid char {}", ch),
             }
         }
@@ -66,7 +68,7 @@ fn score(ch: char) -> u64 {
         ']' => 57,
         '}' => 1197,
         '>' => 25137,
-        _ => panic!("Can't score {}", ch)
+        _ => panic!("Can't score {}", ch),
     }
 }
 
@@ -76,7 +78,7 @@ fn complete_score(ch: char) -> u64 {
         ']' => 2,
         '}' => 3,
         '>' => 4,
-        _ => panic!("Can't score {}", ch)
+        _ => panic!("Can't score {}", ch),
     }
 }
 
@@ -108,7 +110,7 @@ fn main() -> Result<()> {
     }
     scores.sort();
 
-    println!("Part2: {}", scores[scores.len()/2]);
+    println!("Part2: {}", scores[scores.len() / 2]);
 
     Ok(())
 }
