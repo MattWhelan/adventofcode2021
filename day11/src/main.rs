@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
+use itertools::Itertools;
 
 #[derive(Debug)]
 struct Board {
@@ -35,37 +36,16 @@ impl IndexMut<(usize, usize)> for Board {
 }
 
 impl Board {
-    fn around(&self, (x, y): (usize, usize)) -> Vec<(usize, usize)> {
-        let mut ret = Vec::new();
-        if y > 0 {
-            ret.push((x, y - 1));
-            if x > 0 {
-                ret.push((x - 1, y - 1))
-            }
-            if x < self.grid[y].len() - 1 {
-                ret.push((x + 1, y - 1))
-            }
-        }
-
-        if x > 0 {
-            ret.push((x - 1, y));
-        }
-
-        if y < self.grid.len() - 1 {
-            ret.push((x, y + 1));
-            if x > 0 {
-                ret.push((x - 1, y + 1))
-            }
-            if x < self.grid[y].len() - 1 {
-                ret.push((x + 1, y + 1))
-            }
-        }
-
-        if x < self.grid[y].len() - 1 {
-            ret.push((x + 1, y));
-        }
-
-        ret
+    fn around(&self, (x, y): (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
+        let x_range = 0..self.grid[0].len() as isize;
+        let y_range = 0..self.grid.len() as isize;
+        let x = x as isize;
+        let y = y as isize;
+        (-1..=1).cartesian_product(-1..=1)
+            .filter(move |&(p, q)| (p,q) != (0, 0)
+                && x_range.contains(&(x + p))
+                && y_range.contains(&(y + q)))
+            .map(move |(p, q)| ((x + p) as usize, (y + q) as usize))
     }
 
     fn sum(&self) -> usize {
