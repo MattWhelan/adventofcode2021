@@ -11,8 +11,14 @@ struct Edge {
 }
 
 impl Edge {
-    fn contains(&self, node: &str) -> bool {
-        self.left == node || self.right == node
+    fn map(&self, node: &str) -> Option<&str> {
+        if self.left == node {
+            Some(&self.right)
+        } else if self.right == node {
+            Some(&self.left)
+        } else {
+            None
+        }
     }
 }
 
@@ -21,10 +27,7 @@ impl FromStr for Edge {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (left, right) = s.split("-").map(|s| s.to_string()).collect_tuple().unwrap();
-        Ok(Edge {
-            left,
-            right
-        })
+        Ok(Edge { left, right })
     }
 }
 
@@ -32,19 +35,20 @@ fn main() -> Result<()> {
     let input: Vec<Edge> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
     let paths = paths1(&input, "start", "end", HashSet::new());
-
     println!("Part 1: {}", paths.len());
 
-    let paths2 = paths2(&input, "start", "end", HashSet::new(), false);
-
-    // not 113558
+    let paths2 = paths2(&input, "start", "end", Vec::new(), false);
     println!("Part 2: {}", paths2.len());
-
 
     Ok(())
 }
 
-fn paths1(edges: &[Edge], start: &str, end: &str, mut visited: HashSet<String>) -> Vec<Vec<String>> {
+fn paths1(
+    edges: &[Edge],
+    start: &str,
+    end: &str,
+    mut visited: HashSet<String>,
+) -> Vec<Vec<String>> {
     if start == end {
         return vec![vec![start.to_string()]];
     }
@@ -54,13 +58,9 @@ fn paths1(edges: &[Edge], start: &str, end: &str, mut visited: HashSet<String>) 
         visited.insert(start.to_string());
     }
 
-    let mut sub_paths: Vec<Vec<String>> = edges.iter()
-        .filter(|e| e.contains(start))
-        .map(|e| if e.left == start {
-            &e.right
-        } else {
-            &e.left
-        })
+    let mut sub_paths: Vec<Vec<String>> = edges
+        .iter()
+        .filter_map(|e| e.map(start))
         .filter(|n| !visited.contains(*n))
         .flat_map(|n| paths1(edges, n, end, visited.clone()))
         .collect();
@@ -72,25 +72,29 @@ fn paths1(edges: &[Edge], start: &str, end: &str, mut visited: HashSet<String>) 
     sub_paths
 }
 
-fn paths2(edges: &[Edge], start: &str, end: &str, mut visited: HashSet<String>, revisited: bool) -> Vec<Vec<String>> {
+fn is_lower(s: &str) -> bool {
+    s.chars().all(|ch| ch.is_lowercase())
+}
+
+fn paths2(
+    edges: &[Edge],
+    start: &str,
+    end: &str,
+    mut visited: Vec<String>,
+    revisited: bool,
+) -> Vec<Vec<String>> {
+    visited.push(start.to_string());
+
     if start == end {
-        return vec![vec![start.to_string()]];
+        return vec![visited];
     }
 
-    // small check
-    if start == start.to_lowercase() {
-        visited.insert(start.to_string());
-    }
-
-    let mut sub_paths: Vec<Vec<String>> = edges.iter()
-        .filter(|e| e.contains(start))
-        .map(|e| if e.left == start {
-            &e.right
-        } else {
-            &e.left
-        })
+    let sub_paths: Vec<Vec<String>> = edges
+        .iter()
+        .filter_map(|e| e.map(start))
         .flat_map(|n| {
-            if !visited.contains(n) {
+            if !is_lower(n) || !visited.iter().any(|v| v == n) {
+                // Upper or new
                 paths2(edges, n, end, visited.clone(), revisited)
             } else if !revisited && n != "start" && n != "end" {
                 paths2(edges, n, end, visited.clone(), true)
@@ -100,31 +104,9 @@ fn paths2(edges: &[Edge], start: &str, end: &str, mut visited: HashSet<String>, 
         })
         .collect();
 
-    for p in sub_paths.iter_mut() {
-        p.insert(0, start.to_string());
-    }
-
     sub_paths
 }
 
-const TEST: &str = r#"fs-end
-he-DX
-fs-he
-start-DX
-pj-DX
-end-zg
-zg-sl
-zg-pj
-pj-he
-RW-he
-fs-DX
-pj-RW
-zg-RW
-start-pj
-he-WI
-zg-he
-pj-fs
-start-RW"#;
 const INPUT: &str = r#"HF-qu
 end-CF
 CF-ae

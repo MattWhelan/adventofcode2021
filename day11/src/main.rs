@@ -1,8 +1,8 @@
 use anyhow::Result;
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
-use itertools::Itertools;
 
 #[derive(Debug)]
 struct Board {
@@ -41,10 +41,11 @@ impl Board {
         let y_range = 0..self.grid.len() as isize;
         let x = x as isize;
         let y = y as isize;
-        (-1..=1).cartesian_product(-1..=1)
-            .filter(move |&(p, q)| (p,q) != (0, 0)
-                && x_range.contains(&(x + p))
-                && y_range.contains(&(y + q)))
+        (-1..=1)
+            .cartesian_product(-1..=1)
+            .filter(move |&(p, q)| {
+                (p, q) != (0, 0) && x_range.contains(&(x + p)) && y_range.contains(&(y + q))
+            })
             .map(move |(p, q)| ((x + p) as usize, (y + q) as usize))
     }
 
@@ -58,8 +59,7 @@ impl Board {
     fn increase(&mut self) {
         self.grid
             .iter_mut()
-            .for_each(|row| row.iter_mut()
-                .for_each(|cell| *cell += 1))
+            .for_each(|row| row.iter_mut().for_each(|cell| *cell += 1))
     }
 
     fn flash(&mut self, pos: (usize, usize), flashed: &mut HashSet<(usize, usize)>) {
