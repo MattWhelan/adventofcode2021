@@ -15,7 +15,7 @@ impl FromStr for Record {
 fn main() -> Result<()> {
     let input: Vec<Record> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    dbg!(input);
+    dbg!(&input);
     Ok(())
 }
 
