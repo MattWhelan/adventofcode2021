@@ -34,8 +34,8 @@ impl FromStr for Edge {
 fn main() -> Result<()> {
     let input: Vec<Edge> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    let paths = paths1(&input, "start", "end", HashSet::new());
-    println!("Part 1: {}", paths.len());
+    // let paths = paths1(&input, "start", "end", HashSet::new());
+    // println!("Part 1: {}", paths.len());
 
     let paths2 = paths2(&input, "start", "end", Vec::new(), false);
     println!("Part 2: {}", paths2.len());
@@ -76,24 +76,24 @@ fn is_lower(s: &str) -> bool {
     s.chars().all(|ch| ch.is_lowercase())
 }
 
-fn paths2(
-    edges: &[Edge],
-    start: &str,
+fn paths2<'a>(
+    edges: &'a [Edge],
+    start: &'a str,
     end: &str,
-    mut visited: Vec<String>,
+    mut visited: Vec<&'a str>,
     revisited: bool,
-) -> Vec<Vec<String>> {
-    visited.push(start.to_string());
+) -> Vec<Vec<&'a str>> {
+    visited.push(start);
 
     if start == end {
         return vec![visited];
     }
 
-    let sub_paths: Vec<Vec<String>> = edges
+    let sub_paths: Vec<Vec<&str>> = edges
         .iter()
         .filter_map(|e| e.map(start))
         .flat_map(|n| {
-            if !is_lower(n) || !visited.iter().any(|v| v == n) {
+            if !is_lower(n) || !visited.iter().any(|&v| v == n) {
                 // Upper or new
                 paths2(edges, n, end, visited.clone(), revisited)
             } else if !revisited && n != "start" && n != "end" {
