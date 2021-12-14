@@ -102,11 +102,11 @@ fn paths2<'a>(
         .flat_map(|n| {
             if !is_lower(n) || !visited.contains(&n) {
                 // Upper or new
-                let mut v = Vec::with_capacity(visited.len()+1);
+                let mut v = Vec::with_capacity(visited.len() + 1);
                 v.extend_from_slice(&visited);
                 paths2(edges, n, end, v, revisited)
             } else if !revisited && n != "start" && n != "end" {
-                let mut v = Vec::with_capacity(visited.len()+1);
+                let mut v = Vec::with_capacity(visited.len() + 1);
                 v.extend_from_slice(&visited);
                 paths2(edges, n, end, v, true)
             } else {
