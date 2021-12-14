@@ -4,6 +4,13 @@ use std::str::FromStr;
 use anyhow::Result;
 use itertools::Itertools;
 
+#[cfg(not(target_env = "msvc"))]
+use jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 #[derive(Debug)]
 struct Edge {
     left: String,
@@ -93,11 +100,15 @@ fn paths2<'a>(
         .iter()
         .filter_map(|e| e.map(start))
         .flat_map(|n| {
-            if !is_lower(n) || !visited.iter().any(|&v| v == n) {
+            if !is_lower(n) || !visited.contains(&n) {
                 // Upper or new
-                paths2(edges, n, end, visited.clone(), revisited)
+                let mut v = Vec::with_capacity(visited.len()+1);
+                v.extend_from_slice(&visited);
+                paths2(edges, n, end, v, revisited)
             } else if !revisited && n != "start" && n != "end" {
-                paths2(edges, n, end, visited.clone(), true)
+                let mut v = Vec::with_capacity(visited.len()+1);
+                v.extend_from_slice(&visited);
+                paths2(edges, n, end, v, true)
             } else {
                 Vec::new()
             }
