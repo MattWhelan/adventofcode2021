@@ -14,6 +14,56 @@ enum Packet{
     },
 }
 
+impl Packet {
+    fn value(&self) -> u64 {
+        match self {
+            Packet::LITERAL { value, .. } => *value,
+            Packet::OPERATOR { type_id, packets, .. } => {
+                match type_id {
+                    0 => {
+                        packets.iter().map(|p| p.value()).sum()
+                    },
+                    1 => {
+                        packets.iter().map(|p| p.value()).product()
+                    },
+                    2 => {
+                        packets.iter().map(|p| p.value()).min().unwrap()
+                    },
+                    3 => {
+                        packets.iter().map(|p| p.value()).max().unwrap()
+                    },
+                    5 => {
+                        assert_eq!(2, packets.len());
+                        if packets[0].value() > packets[1].value() {
+                            1
+                        } else {
+                            0
+                        }
+                    },
+                    6 => {
+                        assert_eq!(2, packets.len());
+                        if packets[0].value() < packets[1].value() {
+                            1
+                        } else {
+                            0
+                        }
+                    },
+                    7 => {
+                        assert_eq!(2, packets.len());
+                        if packets[0].value() == packets[1].value() {
+                            1
+                        } else {
+                            0
+                        }
+                    },
+
+                    _ => panic!("Unimplemented operator type {}", type_id)
+                }
+            }
+        }
+    }
+}
+
 fn bit_index(i: u8, b: u8) -> bool {
     let selector = 1 << (7-i);
     b & selector != 0
@@ -141,6 +191,9 @@ fn main() -> Result<()> {
 
     let ver_sum = version_sum(&ps);
     println!("Part 1 {}", ver_sum);
+
+    assert_eq!(1, ps.len());
+    println!("Part 2 {}", ps[0].value());
 
     Ok(())
 }
