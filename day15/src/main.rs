@@ -1,13 +1,13 @@
+use anyhow::Result;
+use itertools::Itertools;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::ops::Index;
-use anyhow::Result;
 use std::str::FromStr;
-use itertools::Itertools;
 
 #[derive(Debug)]
 struct Cave {
-    risk: Vec<Vec<u32>>
+    risk: Vec<Vec<u32>>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -21,7 +21,9 @@ impl Ord for State {
         // Notice that the we flip the ordering on costs.
         // In case of a tie we compare positions - this step is necessary
         // to make implementations of `PartialEq` and `Ord` consistent.
-        other.dist.cmp(&self.dist)
+        other
+            .dist
+            .cmp(&self.dist)
             .then_with(|| self.pos.cmp(&other.pos))
     }
 }
@@ -42,7 +44,9 @@ impl Cave {
         (-1..=1)
             .cartesian_product(-1..=1)
             .filter(move |&(p, q)| {
-                ((p+q) as i32).abs() == 1 && x_range.contains(&(x + p)) && y_range.contains(&(y + q))
+                ((p + q) as i32).abs() == 1
+                    && x_range.contains(&(x + p))
+                    && y_range.contains(&(y + q))
             })
             .map(move |(p, q)| ((x + p) as usize, (y + q) as usize))
     }
@@ -55,9 +59,12 @@ impl Cave {
         distance.insert(start, 0);
 
         let mut heap = BinaryHeap::new();
-        heap.push(State { dist: 0, pos: start});
+        heap.push(State {
+            dist: 0,
+            pos: start,
+        });
 
-        while let Some(State{ dist, pos: current}) = heap.pop() {
+        while let Some(State { dist, pos: current }) = heap.pop() {
             let current_cost = distance[&current];
             if dist > current_cost || visited.contains(&current) {
                 continue;
@@ -107,14 +114,11 @@ impl FromStr for Cave {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let risk = s.lines()
-            .map(|l| l.chars()
-                .map(|ch| ch.to_digit(10).unwrap())
-                .collect())
+        let risk = s
+            .lines()
+            .map(|l| l.chars().map(|ch| ch.to_digit(10).unwrap()).collect())
             .collect();
-        Ok(Cave {
-            risk
-        })
+        Ok(Cave { risk })
     }
 }
 
@@ -128,14 +132,11 @@ fn main() -> Result<()> {
 
     let grid_two = expand_grid(&cave.risk);
 
-    let cave2 = Cave {
-        risk: grid_two
-    };
+    let cave2 = Cave { risk: grid_two };
 
     let target2 = (cave2.risk[0].len() - 1, cave2.risk.len() - 1);
     let (d2, _path2) = cave2.path_dist((0, 0), target2);
     println!("Part 2: {}", d2);
-
 
     Ok(())
 }
@@ -149,15 +150,22 @@ fn wrap(n: u32) -> u32 {
 }
 
 fn expand_grid(grid: &Vec<Vec<u32>>) -> Vec<Vec<u32>> {
-    let horiz_expand: Vec<Vec<u32>> = grid.iter()
-        .map(|row| (0..5).flat_map(|inc| row.iter().map(move |x| wrap(*x+inc))).collect())
+    let horiz_expand: Vec<Vec<u32>> = grid
+        .iter()
+        .map(|row| {
+            (0..5)
+                .flat_map(|inc| row.iter().map(move |x| wrap(*x + inc)))
+                .collect()
+        })
         .collect();
 
-    let grid_two: Vec<Vec<u32>> = (0..5).flat_map(|inc| {
-        horiz_expand.iter()
-            .map(|row| row.iter().map(move |x| wrap(*x+inc)).collect())
-            .collect::<Vec<_>>()
-    })
+    let grid_two: Vec<Vec<u32>> = (0..5)
+        .flat_map(|inc| {
+            horiz_expand
+                .iter()
+                .map(|row| row.iter().map(move |x| wrap(*x + inc)).collect())
+                .collect::<Vec<_>>()
+        })
         .collect();
     grid_two
 }

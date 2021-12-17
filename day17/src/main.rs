@@ -1,9 +1,9 @@
+use anyhow::Result;
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
-use anyhow::Result;
 
 #[derive(Debug)]
-struct Probe{
+struct Probe {
     x: i32,
     y: i32,
     dx: i32,
@@ -33,15 +33,20 @@ impl Probe {
     }
 }
 
-fn on_target(pos: (i32, i32), target_x: &RangeInclusive<i32>, target_y: &RangeInclusive<i32>) -> bool {
+fn on_target(
+    pos: (i32, i32),
+    target_x: &RangeInclusive<i32>,
+    target_y: &RangeInclusive<i32>,
+) -> bool {
     target_x.contains(&pos.0) && target_y.contains(&pos.1)
 }
 
 fn main() -> Result<()> {
     let target_x = 241..=273;
-    let target_y=-97..=-63;
+    let target_y = -97..=-63;
 
     let floor = *target_y.start();
+    let far_wall = *target_x.end();
 
     let mut records = HashMap::new();
 
@@ -52,7 +57,7 @@ fn main() -> Result<()> {
             let v0 = (dx, dy);
             let mut highest = 0;
 
-            while pos.1 >= floor {
+            while pos.0 <= far_wall && pos.1 >= floor {
                 pos = p.step();
                 if pos.1 > highest {
                     highest = pos.1;

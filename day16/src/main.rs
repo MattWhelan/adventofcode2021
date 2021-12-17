@@ -1,7 +1,7 @@
 use anyhow::Result;
 use itertools::Itertools;
 
-enum Packet{
+enum Packet {
     LITERAL {
         version: u8,
         type_id: u8,
@@ -10,7 +10,7 @@ enum Packet{
     OPERATOR {
         version: u8,
         type_id: u8,
-        packets: Vec<Packet>
+        packets: Vec<Packet>,
     },
 }
 
@@ -18,75 +18,65 @@ impl Packet {
     fn value(&self) -> u64 {
         match self {
             Packet::LITERAL { value, .. } => *value,
-            Packet::OPERATOR { type_id, packets, .. } => {
-                match type_id {
-                    0 => {
-                        packets.iter().map(|p| p.value()).sum()
-                    },
-                    1 => {
-                        packets.iter().map(|p| p.value()).product()
-                    },
-                    2 => {
-                        packets.iter().map(|p| p.value()).min().unwrap()
-                    },
-                    3 => {
-                        packets.iter().map(|p| p.value()).max().unwrap()
-                    },
-                    5 => {
-                        assert_eq!(2, packets.len());
-                        if packets[0].value() > packets[1].value() {
-                            1
-                        } else {
-                            0
-                        }
-                    },
-                    6 => {
-                        assert_eq!(2, packets.len());
-                        if packets[0].value() < packets[1].value() {
-                            1
-                        } else {
-                            0
-                        }
-                    },
-                    7 => {
-                        assert_eq!(2, packets.len());
-                        if packets[0].value() == packets[1].value() {
-                            1
-                        } else {
-                            0
-                        }
-                    },
-
-                    _ => panic!("Unimplemented operator type {}", type_id)
+            Packet::OPERATOR {
+                type_id, packets, ..
+            } => match type_id {
+                0 => packets.iter().map(|p| p.value()).sum(),
+                1 => packets.iter().map(|p| p.value()).product(),
+                2 => packets.iter().map(|p| p.value()).min().unwrap(),
+                3 => packets.iter().map(|p| p.value()).max().unwrap(),
+                5 => {
+                    assert_eq!(2, packets.len());
+                    if packets[0].value() > packets[1].value() {
+                        1
+                    } else {
+                        0
+                    }
                 }
-            }
+                6 => {
+                    assert_eq!(2, packets.len());
+                    if packets[0].value() < packets[1].value() {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                7 => {
+                    assert_eq!(2, packets.len());
+                    if packets[0].value() == packets[1].value() {
+                        1
+                    } else {
+                        0
+                    }
+                }
+
+                _ => panic!("Unimplemented operator type {}", type_id),
+            },
         }
     }
 }
 
 fn bit_index(i: u8, b: u8) -> bool {
-    let selector = 1 << (7-i);
+    let selector = 1 << (7 - i);
     b & selector != 0
 }
 
-fn number(it: &mut dyn Iterator<Item=bool>, n: u64) -> Option<u64> {
+fn number(it: &mut dyn Iterator<Item = bool>, n: u64) -> Option<u64> {
     let taken: Vec<_> = it.take(n as usize).collect();
     if taken.len() == n as usize {
         Some(
-            taken.into_iter().zip(0..n).map(|(b, i)| if b {
-                1 << (n - 1 - i)
-            } else {
-                0
-            }).fold(0, |acc, n| {
-                acc | n
-            })
+            taken
+                .into_iter()
+                .zip(0..n)
+                .map(|(b, i)| if b { 1 << (n - 1 - i) } else { 0 })
+                .fold(0, |acc, n| acc | n),
         )
     } else {
         None
     }
 }
 
-fn literal(it: &mut dyn Iterator<Item=bool>) -> u64 {
+fn literal(it: &mut dyn Iterator<Item = bool>) -> u64 {
     let mut ret: u64 = 0;
     let mut last = false;
     while !last {
@@ -97,49 +87,44 @@ fn literal(it: &mut dyn Iterator<Item=bool>) -> u64 {
     ret
 }
 
-fn operator(it: &mut dyn Iterator<Item=bool>) -> Option<Vec<Packet>> {
+fn operator(it: &mut dyn Iterator<Item = bool>) -> Option<Vec<Packet>> {
     if let Some(length_type_id) = number(it, 1) {
-        Some(
-            if length_type_id == 0 {
-                let length = number(it, 15).unwrap() as usize;
-                let mut sub_it = it.take(length);
-                packets(&mut sub_it)
-            } else {
-                let sub_packets = number(it, 11).unwrap() as usize;
-                packets_limit(it, sub_packets)
-            }
-        )
+        Some(if length_type_id == 0 {
+            let length = number(it, 15).unwrap() as usize;
+            let mut sub_it = it.take(length);
+            packets(&mut sub_it)
+        } else {
+            let sub_packets = number(it, 11).unwrap() as usize;
+            packets_limit(it, sub_packets)
+        })
     } else {
         None
     }
 }
 
-fn packet(it: &mut dyn Iterator<Item=bool>) -> Option<Packet> {
+fn packet(it: &mut dyn Iterator<Item = bool>) -> Option<Packet> {
     if let Some(version) = number(it, 3) {
         let version = version as u8;
         let type_id = number(it, 3).unwrap() as u8;
         match type_id {
             4 => {
                 let value = literal(it);
-                Some(
-                    Packet::LITERAL {
-                        version,
-                        type_id,
-                        value
-                    }
-                )
-            },
+                Some(Packet::LITERAL {
+                    version,
+                    type_id,
+                    value,
+                })
+            }
             _ => {
                 if let Some(packets) = operator(it) {
                     Some(Packet::OPERATOR {
                         version,
                         type_id,
-                        packets
+                        packets,
                     })
                 } else {
                     None
                 }
-
             }
         }
     } else {
@@ -147,7 +132,7 @@ fn packet(it: &mut dyn Iterator<Item=bool>) -> Option<Packet> {
     }
 }
 
-fn packets(it: &mut dyn Iterator<Item=bool>) -> Vec<Packet> {
+fn packets(it: &mut dyn Iterator<Item = bool>) -> Vec<Packet> {
     let mut ret = Vec::new();
     while let Some(p) = packet(it) {
         ret.push(p)
@@ -155,7 +140,7 @@ fn packets(it: &mut dyn Iterator<Item=bool>) -> Vec<Packet> {
     ret
 }
 
-fn packets_limit(it: &mut dyn Iterator<Item=bool>, n: usize) -> Vec<Packet> {
+fn packets_limit(it: &mut dyn Iterator<Item = bool>, n: usize) -> Vec<Packet> {
     let mut ret = Vec::new();
     while ret.len() < n {
         ret.push(packet(it).unwrap())
@@ -164,26 +149,32 @@ fn packets_limit(it: &mut dyn Iterator<Item=bool>, n: usize) -> Vec<Packet> {
 }
 
 fn version_sum(packets: &[Packet]) -> u64 {
-    packets.iter().map(|p| match p {
-        Packet::LITERAL { version, .. } => { *version as u64 }
-        Packet::OPERATOR { version, packets: sub_packets, .. } => {
-            *version as u64 + version_sum(&sub_packets)
-        }
-    }).sum()
+    packets
+        .iter()
+        .map(|p| match p {
+            Packet::LITERAL { version, .. } => *version as u64,
+            Packet::OPERATOR {
+                version,
+                packets: sub_packets,
+                ..
+            } => *version as u64 + version_sum(&sub_packets),
+        })
+        .sum()
 }
 
 fn main() -> Result<()> {
     let input = INPUT;
     let mut bs = Vec::new();
-    for (ch0,ch1) in input.chars().tuples() {
+    for (ch0, ch1) in input.chars().tuples() {
         let mut b: u8 = ch0.to_digit(16).unwrap() as u8;
         b = b << 4 | ch1.to_digit(16).unwrap() as u8;
         bs.push(b);
     }
 
-    let bits: Vec<bool> = bs.iter().flat_map(|b| {
-        (0..8).map(move |i| bit_index(i, *b))
-    }).collect();
+    let bits: Vec<bool> = bs
+        .iter()
+        .flat_map(|b| (0..8).map(move |i| bit_index(i, *b)))
+        .collect();
 
     let mut it = bits.into_iter();
 
