@@ -1,46 +1,26 @@
 use anyhow::Result;
-use std::str::FromStr;
+use itertools::{Itertools};
+use lib::SnailNum;
 
-#[derive(Debug)]
-enum SnailNum {
-    Reg(u32),
-    Pair(Box<SnailNum>, Box<SnailNum>)
-}
-
-impl SnailNum {
-    fn pair(chs: &[char]) -> (SnailNum, usize) {
-        assert_eq!(&'[', &chs[0]);
-        let (left, off) = SnailNum::num(&chs[1..]);
-        assert_eq!(&',', &chs[off+1]);
-        let (right, off2) = SnailNum::num(&chs[off+2..]);
-        assert_eq!(&']', &chs[off + 2 + off2]);
-        (SnailNum::Pair(Box::new(left), Box::new(right)), off + 3 + off2)
-    }
-
-    fn num(chs: &[char]) -> (SnailNum, usize) {
-        match &chs[0] {
-            '[' => SnailNum::pair(chs),
-            '0'..='9' => (SnailNum::Reg(*&chs[0].to_digit(10).unwrap()), 1),
-            ch => panic!("Unexpected {}", ch),
-        }
-    }
-}
-
-impl FromStr for SnailNum {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let chs: Vec<char> = s.chars().collect();
-        let (sn, off) = SnailNum::pair(&chs);
-        assert_eq!(chs.len(), off);
-        Ok(sn)
-    }
-}
+mod lib;
 
 fn main() -> Result<()> {
     let input: Vec<SnailNum> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    dbg!(&input);
+    let added = input.clone().into_iter().reduce(|a, b| a.add(&b)).unwrap();
+
+    println!("Part 1 {}", added.magnitude());
+
+    let max_pair_sum = input.into_iter()
+        .tuple_combinations()
+        .flat_map(|(a, b)| {
+            [a.clone().add(&b), b.add(&a)]
+        })
+        .map(|n| n.magnitude())
+        .max().unwrap();
+
+    println!("Part 2 {}", max_pair_sum);
+
     Ok(())
 }
 
