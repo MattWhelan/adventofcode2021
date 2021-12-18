@@ -91,7 +91,7 @@ impl SnailNum {
                             right.find_explode(depth + 1, left_num, right_num)
                         }
                     } else {
-                        panic!("WTF")
+                        unreachable!()
                     }
                 }
             }
