@@ -4,7 +4,6 @@ use itertools::Itertools;
 enum Packet {
     LITERAL {
         version: u8,
-        type_id: u8,
         value: u64,
     },
     OPERATOR {
@@ -109,11 +108,7 @@ fn packet(it: &mut dyn Iterator<Item = bool>) -> Option<Packet> {
         match type_id {
             4 => {
                 let value = literal(it);
-                Some(Packet::LITERAL {
-                    version,
-                    type_id,
-                    value,
-                })
+                Some(Packet::LITERAL { version, value })
             }
             _ => {
                 if let Some(packets) = operator(it) {

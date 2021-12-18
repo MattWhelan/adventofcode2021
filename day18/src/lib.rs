@@ -25,10 +25,13 @@ impl SnailNum {
     fn pair(chs: &[char]) -> (SnailNum, usize) {
         assert_eq!(&'[', &chs[0]);
         let (left, off) = SnailNum::num(&chs[1..]);
-        assert_eq!(&',', &chs[off+1]);
-        let (right, off2) = SnailNum::num(&chs[off+2..]);
+        assert_eq!(&',', &chs[off + 1]);
+        let (right, off2) = SnailNum::num(&chs[off + 2..]);
         assert_eq!(&']', &chs[off + 2 + off2]);
-        (SnailNum::Pair(Box::new(left), Box::new(right)), off + 3 + off2)
+        (
+            SnailNum::Pair(Box::new(left), Box::new(right)),
+            off + 3 + off2,
+        )
     }
 
     fn num(chs: &[char]) -> (SnailNum, usize) {
@@ -40,10 +43,7 @@ impl SnailNum {
     }
 
     pub fn add(&self, rhs: &Self) -> Self {
-        let result = SnailNum::Pair(
-            Box::new(self.clone()),
-            Box::new(rhs.clone())
-        );
+        let result = SnailNum::Pair(Box::new(self.clone()), Box::new(rhs.clone()));
 
         result.reduce()
     }
@@ -62,12 +62,17 @@ impl SnailNum {
         }
     }
 
-    fn find_explode<'a>(&'a mut self, depth: usize, left_num: &mut Option<&'a mut u32>, right_num: &mut Option<&'a mut u32>) -> Option<Box<Self>> {
+    fn find_explode<'a>(
+        &'a mut self,
+        depth: usize,
+        left_num: &mut Option<&'a mut u32>,
+        right_num: &mut Option<&'a mut u32>,
+    ) -> Option<Box<Self>> {
         let mut ret = match self {
             SnailNum::Reg(n) => {
                 left_num.replace(n);
                 None
-            },
+            }
             SnailNum::Pair(_, _) => {
                 if depth == 4 {
                     let mut ret = Box::new(SnailNum::Reg(0));
@@ -89,7 +94,7 @@ impl SnailNum {
                         panic!("WTF")
                     }
                 }
-            },
+            }
         };
         if depth == 0 {
             if let Some(exploding) = &mut ret {
@@ -125,13 +130,11 @@ impl SnailNum {
 
                 *self = SnailNum::Pair(
                     Box::new(SnailNum::Reg(left_half)),
-                    Box::new(SnailNum::Reg(right_half))
+                    Box::new(SnailNum::Reg(right_half)),
                 );
                 true
             }
-            SnailNum::Pair(left, right) => {
-                left.split() || right.split()
-            }
+            SnailNum::Pair(left, right) => left.split() || right.split(),
             _ => false,
         }
     }
@@ -144,7 +147,7 @@ impl SnailNum {
     pub fn magnitude(&self) -> u32 {
         match self {
             SnailNum::Reg(n) => *n,
-            SnailNum::Pair(left, right) => 3 * left.magnitude() + 2*right.magnitude()
+            SnailNum::Pair(left, right) => 3 * left.magnitude() + 2 * right.magnitude(),
         }
     }
 }

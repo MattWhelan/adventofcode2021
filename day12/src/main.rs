@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::str::FromStr;
 
 use anyhow::Result;
@@ -48,35 +47,6 @@ fn main() -> Result<()> {
     println!("Part 2: {}", paths2.len());
 
     Ok(())
-}
-
-fn paths1(
-    edges: &[Edge],
-    start: &str,
-    end: &str,
-    mut visited: HashSet<String>,
-) -> Vec<Vec<String>> {
-    if start == end {
-        return vec![vec![start.to_string()]];
-    }
-
-    // small check
-    if start == start.to_lowercase() {
-        visited.insert(start.to_string());
-    }
-
-    let mut sub_paths: Vec<Vec<String>> = edges
-        .iter()
-        .filter_map(|e| e.map(start))
-        .filter(|n| !visited.contains(*n))
-        .flat_map(|n| paths1(edges, n, end, visited.clone()))
-        .collect();
-
-    for p in sub_paths.iter_mut() {
-        p.insert(0, start.to_string());
-    }
-
-    sub_paths
 }
 
 fn is_lower(s: &str) -> bool {

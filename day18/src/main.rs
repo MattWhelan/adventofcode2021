@@ -1,5 +1,5 @@
 use anyhow::Result;
-use itertools::{Itertools};
+use itertools::Itertools;
 use lib::SnailNum;
 
 mod lib;
@@ -11,13 +11,13 @@ fn main() -> Result<()> {
 
     println!("Part 1 {}", added.magnitude());
 
-    let max_pair_sum = input.into_iter()
+    let max_pair_sum = input
+        .into_iter()
         .tuple_combinations()
-        .flat_map(|(a, b)| {
-            [a.add(&b), b.add(&a)]
-        })
+        .flat_map(|(a, b)| [a.add(&b), b.add(&a)])
         .map(|n| n.magnitude())
-        .max().unwrap();
+        .max()
+        .unwrap();
 
     println!("Part 2 {}", max_pair_sum);
 
