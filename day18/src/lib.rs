@@ -113,14 +113,8 @@ impl SnailNum {
         ret
     }
 
-    fn explode(&self) -> Option<Self> {
-        let mut outer = self.clone();
-
-        if outer.find_explode(0, &mut None, &mut None).is_some() {
-            Some(outer)
-        } else {
-            None
-        }
+    fn explode(&mut self) -> bool {
+        self.find_explode(0, &mut None, &mut None).is_some()
     }
 
     fn split(&mut self) -> bool {
@@ -142,17 +136,9 @@ impl SnailNum {
         }
     }
 
-    fn reduce(self) -> Self {
-        let mut sn = self;
-        loop {
-            sn = if let Some(exploded) = sn.explode() {
-                exploded
-            } else if sn.split() {
-                sn
-            } else {
-                break sn
-            }
-        }
+    fn reduce(mut self) -> Self {
+        while self.explode() || self.split() {}
+        self
     }
 
     pub fn magnitude(&self) -> u32 {
@@ -184,10 +170,10 @@ mod test {
 
     #[test]
     fn test_explode() {
-        let num: SnailNum = "[[[[[9,8],1],2],3],4]".parse().unwrap();
+        let mut num: SnailNum = "[[[[[9,8],1],2],3],4]".parse().unwrap();
 
-        let result = num.explode().unwrap();
-        assert_eq!("[[[[0,9],2],3],4]", &result.to_string());
+        assert!(num.explode());
+        assert_eq!("[[[[0,9],2],3],4]", &num.to_string());
     }
 
     #[test]

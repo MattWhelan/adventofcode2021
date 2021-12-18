@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     let max_pair_sum = input.into_iter()
         .tuple_combinations()
         .flat_map(|(a, b)| {
-            [a.clone().add(&b), b.add(&a)]
+            [a.add(&b), b.add(&a)]
         })
         .map(|n| n.magnitude())
         .max().unwrap();
