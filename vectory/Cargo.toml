@@ -5,3 +5,4 @@ authors = ["Matt Whelan <matt@blacklogik.com>"]
 edition = "2021"
 
 [dependencies]
+itertools = "0.10"

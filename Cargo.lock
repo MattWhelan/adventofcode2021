@@ -238,6 +238,7 @@ dependencies = [
  "lazy_static",
  "regex",
  "thiserror",
+ "vectory",
 ]
 
 [[package]]
@@ -451,3 +452,6 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 [[package]]
 name = "vectory"
 version = "0.1.0"
+dependencies = [
+ "itertools",
+]
