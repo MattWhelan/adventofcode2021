@@ -1,89 +1,50 @@
-use std::collections::HashSet;
 use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use vectory::{IntVector, Matrix};
+use std::collections::{HashMap, HashSet};
+use vectory::{IntVector, Matrix, Vector};
 
-const RX_0: Matrix<3> = Matrix{
-    xs: [
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1],
-    ],
+const RX_0: Matrix<3> = Matrix {
+    xs: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
 };
 
-const RX_90: Matrix<3> = Matrix{
-    xs: [
-        [1, 0, 0],
-        [0, 0, -1],
-        [0, 1, 0],
-    ],
+const RX_90: Matrix<3> = Matrix {
+    xs: [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
 };
 
-const RX_180: Matrix<3> = Matrix{
-    xs: [
-        [1, 0, 0],
-        [0, -1, 0],
-        [0, 0, -1],
-    ],
+const RX_180: Matrix<3> = Matrix {
+    xs: [[1, 0, 0], [0, -1, 0], [0, 0, -1]],
 };
 
-const RX_270: Matrix<3> = Matrix{
-    xs: [
-        [1, 0, 0],
-        [0, 0, 1],
-        [0, -1, 0],
-    ],
+const RX_270: Matrix<3> = Matrix {
+    xs: [[1, 0, 0], [0, 0, 1], [0, -1, 0]],
 };
 
-const RY_0: Matrix<3> = Matrix{
-    xs: [
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1],
-    ],
+const RY_0: Matrix<3> = Matrix {
+    xs: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
 };
 
-const RY_90: Matrix<3> = Matrix{
-    xs: [
-        [0, 0, 1],
-        [0, 1, 0],
-        [-1, 0, 0],
-    ],
+const RY_90: Matrix<3> = Matrix {
+    xs: [[0, 0, 1], [0, 1, 0], [-1, 0, 0]],
 };
 
-const RY_180: Matrix<3> = Matrix{
-    xs: [
-        [-1, 0, 0],
-        [0, 1, 0],
-        [0, 0, -1],
-    ],
+const RY_180: Matrix<3> = Matrix {
+    xs: [[-1, 0, 0], [0, 1, 0], [0, 0, -1]],
 };
 
-const RY_270: Matrix<3> = Matrix{
-    xs: [
-        [0, 0, -1],
-        [0, 1, 0],
-        [1, 0, 0],
-    ],
+const RY_270: Matrix<3> = Matrix {
+    xs: [[0, 0, -1], [0, 1, 0], [1, 0, 0]],
 };
 
-const RZ_90: Matrix<3> = Matrix{
-    xs: [
-        [0, -1, 0],
-        [1, 0, 0],
-        [0, 0, 1],
-    ],
+const RZ_90: Matrix<3> = Matrix {
+    xs: [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
 };
 
-const RZ_270: Matrix<3> = Matrix{
-    xs: [
-        [0, 1, 0],
-        [-1, 0, 0],
-        [0, 0, 1],
-    ],
+const RZ_270: Matrix<3> = Matrix {
+    xs: [[0, 1, 0], [-1, 0, 0], [0, 0, 1]],
 };
 
+// All the possible rotations
 lazy_static! {
     static ref ROTATIONS: [Matrix<3>; 24] = [
         RX_0 * RY_0,
@@ -92,21 +53,18 @@ lazy_static! {
         RX_0 * RY_270,
         RX_0 * RZ_90,
         RX_0 * RZ_270,
-
         RX_90 * RY_0,
         RX_90 * RY_90,
         RX_90 * RY_180,
         RX_90 * RY_270,
         RX_90 * RZ_90,
         RX_90 * RZ_270,
-
         RX_180 * RY_0,
         RX_180 * RY_90,
         RX_180 * RY_180,
         RX_180 * RY_270,
         RX_180 * RZ_90,
         RX_180 * RZ_270,
-
         RX_270 * RY_0,
         RX_270 * RY_90,
         RX_270 * RY_180,
@@ -116,75 +74,97 @@ lazy_static! {
     ];
 }
 
-// sin(90) = 1
-// sin(180) = 0
-// sin(270) = -1
-
-// cos(90) = 0
-// cos(180) = -1
-// cos(270) = 0
-
-
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Report {
     name: String,
-    beacons: Vec<IntVector<3>>,
+    beacons: HashSet<IntVector<3>>,
 }
 
 #[derive(Debug)]
 struct Fit {
-    left: String,
-    right: String,
-    count: usize,
-    rotation: &'static Matrix<3>,
-    offset: IntVector<3>
+    offset: IntVector<3>,
+    beacons: HashSet<IntVector<3>>,
 }
 
 impl Report {
-    fn best_fit(&self, rhs: &Report) -> Option<Fit> {
+    fn first_fit(&self, rhs: &Report) -> Option<Fit> {
         // For each rotation
-        ROTATIONS.iter()
+        ROTATIONS
+            .iter()
             .flat_map(|rotation| {
                 // For each left-beacon
                 self.beacons.iter().flat_map(move |left| {
                     // For each right beacon
-                    rhs.beacons.iter().map(move |right| {
+                    rhs.beacons.iter().filter_map(move |right| {
                         let right_rot = rotation * right;
                         // find the offset that makes them line up
-                        let offset = *left - right_rot;
-                        // count the total overlaps
-                        let count = rhs.beacons.iter()
-                            .filter(|b| {
+                        let offset = left - &right_rot;
+                        // transform the rhs beacons
+                        let beacons = rhs
+                            .beacons
+                            .iter()
+                            .map(|b| {
                                 let b_rot = rotation * b;
-                                let b_off = &b_rot + &offset;
-                                self.beacons.contains(&b_off)
+                                &b_rot + &offset
                             })
-                            .count();
+                            .collect();
 
-                        Fit {
-                            left: self.name.clone(),
-                            right: rhs.name.clone(),
-                            count,
-                            rotation,
-                            offset
+                        let overlap = self.beacons.intersection(&beacons).count();
+
+                        if overlap >= 12 {
+                            Some(Fit { offset, beacons })
+                        } else {
+                            None
                         }
                     })
                 })
             })
-            .filter(|f| f.count >= 12)
-            .max_by_key(|f| f.count)
-        // return the max by Fit.count
+            .next()
+    }
+
+    fn realign(reports: &[Report]) -> (Report, Vec<IntVector<3>>) {
+        let mut ret = reports[0].clone();
+
+        let mut remaining: HashMap<&str, &Report> =
+            reports[1..].iter().map(|r| (r.name.as_str(), r)).collect();
+
+        let mut offsets = Vec::with_capacity(reports.len());
+        offsets.push(IntVector::from([0, 0, 0]));
+
+        while !remaining.is_empty() {
+            remaining = remaining
+                .values()
+                .filter(|r| {
+                    if let Some(fit) = ret.first_fit(r) {
+                        ret.beacons.extend(fit.beacons);
+                        offsets.push(fit.offset);
+                        false
+                    } else {
+                        true
+                    }
+                })
+                .map(|&r| (r.name.as_str(), r))
+                .collect();
+        }
+
+        (ret, offsets)
     }
 }
 
 fn main() -> Result<()> {
     let input: Vec<&str> = INPUT.lines().collect();
-    let reports: Vec<Report> = input.split(|l| l.is_empty())
+    let reports: Vec<Report> = input
+        .split(|l| l.is_empty())
         .map(|report: &[&str]| {
             let name = report[0];
 
-            let coords: Vec<IntVector<3> >= report[1..].iter()
-                .map(|l| l.split(",").map(|s| s.parse::<i64>().unwrap()).collect::<Vec<i64>>())
+            let coords: HashSet<IntVector<3>> = report[1..]
+                .iter()
+                .map(|l| {
+                    l.split(",")
+                        .map(|s| s.parse::<i64>().unwrap())
+                        .collect::<Vec<i64>>()
+                })
                 .map(|c| IntVector::from(&c[..]))
                 .collect();
 
@@ -197,31 +177,23 @@ fn main() -> Result<()> {
 
     part1(&reports);
 
-    // let x = IntVector::from([1, 2, 3]);
-    // for v in ROTATIONS.iter().map(|rot| rot * &x) {
-    //     println!("{}", v);
-    // }
-
     Ok(())
 }
 
+fn find_max_distance(vs: &[IntVector<3>]) -> i64 {
+    vs.iter()
+        .tuple_combinations()
+        .map(|(x, y)| x.manh_dist(y))
+        .max()
+        .unwrap()
+}
+
 fn part1(reports: &[Report]) {
-    let beacon_reports: usize = reports.iter().map(|r| r.beacons.len()).sum();
-    let fits: Vec<Fit> = reports.iter().tuple_combinations()
-        .filter_map(|(l, r)| {
-            l.best_fit(r)
-        })
-        .collect();
+    let (aligned, sensor_coords) = Report::realign(reports);
+    println!("Part 1: {}", aligned.beacons.len());
 
-    //assert!(fits.len() > reports.len()-1, "{} fits for {} reports", fits.len(), reports.len());
-
-    let fit_count_total: usize = fits.iter().map(|f| f.count).sum();
-
-    dbg!(beacon_reports);
-    dbg!(fits);
-    // high: 573
-    // low: 453
-    println!("Part 1: {}", beacon_reports - fit_count_total);
+    let max_dist = find_max_distance(&sensor_coords);
+    println!("Part 2: {}", max_dist);
 }
 
 const INPUT: &str = r#"--- scanner 0 ---

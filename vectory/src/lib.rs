@@ -1,6 +1,6 @@
+use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Index, Mul, Sub};
-use itertools::Itertools;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct IntVector<const D: usize> {
@@ -40,24 +40,24 @@ impl<const D: usize> Add for &IntVector<D> {
     type Output = IntVector<D>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = self.clone();
+        let mut ret = IntVector { xs: [0; D] };
         for i in 0..D {
-            ret.xs[i] = ret.xs[i] + rhs[i].clone();
+            ret.xs[i] = self[i] + rhs[i];
         }
         ret
     }
 }
 
-impl<const D: usize> Sub for IntVector<D> {
-    type Output = Self;
+impl<const D: usize> Sub for &IntVector<D> {
+    type Output = IntVector<D>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let mut xs = [0; D];
+        let mut ret = IntVector { xs: [0; D] };
         for i in 0..D {
-            xs[i] = self.xs[i] - rhs.xs[i];
+            ret.xs[i] = self.xs[i] - rhs.xs[i];
         }
 
-        IntVector { xs }
+        ret
     }
 }
 
@@ -103,10 +103,10 @@ impl<const D: usize> Vector<i64> for IntVector<D> {
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Matrix<const D: usize> {
-    pub xs: [[i64; D]; D]
+    pub xs: [[i64; D]; D],
 }
 
-impl <const D: usize> From<&[&[i64]]> for Matrix<D>{
+impl<const D: usize> From<&[&[i64]]> for Matrix<D> {
     fn from(src: &[&[i64]]) -> Self {
         let mut xss: [[i64; D]; D] = [[0; D]; D];
         for i in 0..D {
@@ -117,33 +117,38 @@ impl <const D: usize> From<&[&[i64]]> for Matrix<D>{
     }
 }
 
-impl <const D: usize> Mul<&IntVector<D>> for &Matrix<D> {
+impl<const D: usize> Mul<&IntVector<D>> for &Matrix<D> {
     type Output = IntVector<D>;
 
     fn mul(self, rhs: &IntVector<D>) -> Self::Output {
-        let xs: Vec<i64> = (0..D).map(|i| {
-            self.xs[i].iter().zip(rhs.xs.iter()).map(|(a,b)| a * b).sum()
-        }).collect();
+        let mut ret = IntVector { xs: [0; D] };
 
-        IntVector::from(&xs[..])
-    }
-}
-
-impl <const D: usize> Mul<Matrix<D>> for Matrix<D> {
-    type Output = Matrix<D>;
-
-    fn mul(self, rhs: Matrix<D>) -> Self::Output {
-        let mut xs: [[i64; D]; D] = [[0; D]; D];
         for i in 0..D {
             for j in 0..D {
-                xs[i][j] = (0..D).map(|k| self.xs[i][k] * rhs.xs[k][j]).sum();
+                ret.xs[i] += self.xs[i][j] * rhs.xs[j];
             }
         }
 
-        Matrix { xs }
+        ret
     }
 }
 
+impl<const D: usize> Mul<Matrix<D>> for Matrix<D> {
+    type Output = Matrix<D>;
+
+    fn mul(self, rhs: Matrix<D>) -> Self::Output {
+        let mut ret = Matrix { xs: [[0; D]; D] };
+        for i in 0..D {
+            for j in 0..D {
+                for k in 0..D {
+                    ret.xs[i][j] += self.xs[i][k] * rhs.xs[k][j];
+                }
+            }
+        }
+
+        ret
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -160,14 +165,10 @@ mod tests {
     fn rotate_3d() {
         let x = IntVector::from([1, 0, 0]);
         let r = Matrix {
-            xs: [
-                [0, -1, 0],
-                [1, 0, 0],
-                [0, 0, 1]
-                ],
+            xs: [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
         };
 
-        let result = r * x;
-        assert_eq!(IntVector::from([0,1,0]), result);
+        let result = &r * &x;
+        assert_eq!(IntVector::from([0, 1, 0]), result);
     }
 }
