@@ -19,11 +19,18 @@ impl Cuboid {
             && bounds.contains(self.z.end())
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=(i32, i32, i32)> + 'a {
-        self.x.clone().flat_map(move |x| self.y.clone().flat_map(move |y| self.z.clone().map(move |z| (x, y, z))))
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (i32, i32, i32)> + 'a {
+        self.x.clone().flat_map(move |x| {
+            self.y
+                .clone()
+                .flat_map(move |y| self.z.clone().map(move |z| (x, y, z)))
+        })
     }
 
-    fn range_intersection(left: &RangeInclusive<i32>, right: &RangeInclusive<i32>) -> Option<RangeInclusive<i32>> {
+    fn range_intersection(
+        left: &RangeInclusive<i32>,
+        right: &RangeInclusive<i32>,
+    ) -> Option<RangeInclusive<i32>> {
         if left.contains(right.start()) || left.contains(right.end()) {
             Some(*left.start().max(right.start())..=(*left.end().min(right.end())))
         } else if right.contains(left.start()) || right.contains(left.end()) {
@@ -33,15 +40,18 @@ impl Cuboid {
         }
     }
 
-    fn range_sub(left: &RangeInclusive<i32>, right: &RangeInclusive<i32>) -> Vec<RangeInclusive<i32>> {
+    fn range_sub(
+        left: &RangeInclusive<i32>,
+        right: &RangeInclusive<i32>,
+    ) -> Vec<RangeInclusive<i32>> {
         let mut ret = Vec::new();
         // Left side remainder
         if left.contains(right.start()) && left.start() < right.start() {
-            ret.push(RangeInclusive::new(*left.start(), right.start()-1));
+            ret.push(RangeInclusive::new(*left.start(), right.start() - 1));
         }
         // Right side remainder
         if left.contains(right.end()) && left.end() > right.end() {
-            ret.push(RangeInclusive::new(right.end()+1, *left.end()))
+            ret.push(RangeInclusive::new(right.end() + 1, *left.end()))
         }
         ret
     }
@@ -51,13 +61,14 @@ impl Cuboid {
         let y = Cuboid::range_intersection(&self.y, &other.y);
         let z = Cuboid::range_intersection(&self.z, &other.z);
 
-        x.zip(y).zip(z).map(|((x, y), z)| Cuboid {x, y, z})
+        x.zip(y).zip(z).map(|((x, y), z)| Cuboid { x, y, z })
     }
 
     fn sub(&self, other: &Self) -> Vec<Cuboid> {
         if let Some(isect) = Cuboid::intersection(self, other) {
             let x_parts = Cuboid::range_sub(&self.x, &other.x);
-            let mut ret: Vec<Cuboid> = x_parts.into_iter()
+            let mut ret: Vec<Cuboid> = x_parts
+                .into_iter()
                 .map(|x| Cuboid {
                     x,
                     y: self.y.clone(),
@@ -65,23 +76,17 @@ impl Cuboid {
                 })
                 .collect();
             let y_parts = Cuboid::range_sub(&self.y, &other.y);
-            ret.extend(
-                y_parts.into_iter()
-                    .map(|y| Cuboid {
-                        x: isect.x.clone(),
-                        y,
-                        z: self.z.clone(),
-                    })
-            );
+            ret.extend(y_parts.into_iter().map(|y| Cuboid {
+                x: isect.x.clone(),
+                y,
+                z: self.z.clone(),
+            }));
             let z_parts = Cuboid::range_sub(&self.z, &other.z);
-            ret.extend(
-                z_parts.into_iter()
-                    .map(|z| Cuboid {
-                        x: isect.x.clone(),
-                        y: isect.y.clone(),
-                        z,
-                    })
-            );
+            ret.extend(z_parts.into_iter().map(|z| Cuboid {
+                x: isect.x.clone(),
+                y: isect.y.clone(),
+                z,
+            }));
 
             ret
         } else {
@@ -100,7 +105,7 @@ impl Cuboid {
 #[derive(Debug)]
 pub enum VolSet {
     Simple(Cuboid),
-    Union (HashSet<Cuboid>),
+    Union(HashSet<Cuboid>),
 }
 
 impl VolSet {
@@ -113,14 +118,12 @@ impl VolSet {
                 ret
             }
             VolSet::Union(left) => {
-                let mut cubes: Vec<Cuboid> = left.iter()
-                    .flat_map(|c| c.sub(&other))
-                    .collect();
+                let mut cubes: Vec<Cuboid> = left.iter().flat_map(|c| c.sub(&other)).collect();
                 cubes.push(other);
 
                 let ret = VolSet::Union(HashSet::from_iter(cubes.into_iter()));
                 ret
-            },
+            }
         }
     }
 
@@ -135,20 +138,16 @@ impl VolSet {
                 }
             }
             VolSet::Union(left) => {
-                let cubes = left.iter()
-                    .flat_map(|c| c.sub(&other))
-                    .collect();
+                let cubes = left.iter().flat_map(|c| c.sub(&other)).collect();
                 VolSet::Union(cubes)
-            },
+            }
         }
     }
 
     pub fn volume(&self) -> u64 {
         match self {
             VolSet::Simple(c) => c.volume(),
-            VolSet::Union(cubes) => {
-                cubes.iter().map(|c| c.volume()).sum()
-            }
+            VolSet::Union(cubes) => cubes.iter().map(|c| c.volume()).sum(),
         }
     }
 }
@@ -172,14 +171,36 @@ mod test {
         };
 
         let expected: Vec<Cuboid> = vec![
-            Cuboid { x: -1..=-1, y: -1..=1, z: -1..=1 },
-            Cuboid { x: 1..=1, y: -1..=1, z: -1..=1 },
-
-            Cuboid { x: 0..=0, y: -1..=-1, z: -1..=1 },
-            Cuboid { x: 0..=0, y: 1..=1, z: -1..=1 },
-
-            Cuboid { x: 0..=0, y: 0..=0, z: -1..=-1 },
-            Cuboid { x: 0..=0, y: 0..=0, z: 1..=1 },
+            Cuboid {
+                x: -1..=-1,
+                y: -1..=1,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 1..=1,
+                y: -1..=1,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 0..=0,
+                y: -1..=-1,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 0..=0,
+                y: 1..=1,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 0..=0,
+                y: 0..=0,
+                z: -1..=-1,
+            },
+            Cuboid {
+                x: 0..=0,
+                y: 0..=0,
+                z: 1..=1,
+            },
         ];
 
         let result = left.sub(&right);
@@ -201,9 +222,21 @@ mod test {
         };
 
         let expected: Vec<Cuboid> = vec![
-            Cuboid { x: -1..=0, y: -1..=1, z: -1..=1 },
-            Cuboid { x: 1..=1, y: -1..=0, z: -1..=1 },
-            Cuboid { x: 1..=1, y: 1..=1, z: -1..=0 },
+            Cuboid {
+                x: -1..=0,
+                y: -1..=1,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 1..=1,
+                y: -1..=0,
+                z: -1..=1,
+            },
+            Cuboid {
+                x: 1..=1,
+                y: 1..=1,
+                z: -1..=0,
+            },
         ];
 
         let result = left.sub(&right);
@@ -224,9 +257,7 @@ mod test {
             z: 2..=3,
         };
 
-        let expected: Vec<Cuboid> = vec![
-            left.clone(),
-        ];
+        let expected: Vec<Cuboid> = vec![left.clone()];
 
         let result = left.sub(&right);
         assert_eq!(expected, result);

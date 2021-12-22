@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use anyhow::Result;
+use std::collections::HashMap;
 
 trait Rng {
     fn roll(&mut self) -> u32;
@@ -7,7 +7,7 @@ trait Rng {
 
 struct Part1Rng {
     next: u32,
-    counter: u32
+    counter: u32,
 }
 
 impl Rng for Part1Rng {
@@ -36,18 +36,18 @@ impl Game {
     fn round<R: Rng>(&mut self, rng: &mut R) -> Option<(u32, u32)> {
         let roll1: u32 = (0..3).map(|_| rng.roll()).sum();
         self.pos1 = (self.pos1 + roll1) % 10;
-        self.score1 += self.pos1+1;
+        self.score1 += self.pos1 + 1;
 
         if self.score1 >= self.target {
-            return Some((self.score1, self.score2))
+            return Some((self.score1, self.score2));
         }
 
         let roll2: u32 = (0..3).map(|_| rng.roll()).sum();
         self.pos2 = (self.pos2 + roll2) % 10;
-        self.score2 += self.pos2+1;
+        self.score2 += self.pos2 + 1;
 
         if self.score2 >= self.target {
-            return Some((self.score2, self.score1))
+            return Some((self.score2, self.score1));
         }
 
         None
@@ -64,9 +64,7 @@ impl PlayerState {
     fn roll(&self, r: u8) -> PlayerState {
         let pos = (self.pos + r) % 10;
         let score = self.score + pos + 1;
-        PlayerState {
-            pos, score
-        }
+        PlayerState { pos, score }
     }
 
     fn is_win(&self) -> bool {
@@ -76,7 +74,7 @@ impl PlayerState {
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 struct GameState {
-    players: [PlayerState; 2]
+    players: [PlayerState; 2],
 }
 
 struct DiracDiceGame {
@@ -84,34 +82,24 @@ struct DiracDiceGame {
 }
 
 impl DiracDiceGame {
-    const ROLLS: [(u64, u8); 7] = [
-        (1, 3),
-        (3, 4),
-        (6, 5),
-        (7, 6),
-        (6, 7),
-        (3, 8),
-        (1, 9),
-    ];
+    const ROLLS: [(u64, u8); 7] = [(1, 3), (3, 4), (6, 5), (7, 6), (6, 7), (3, 8), (1, 9)];
 
     fn new(p1_start: u8, p2_start: u8) -> DiracDiceGame {
         let players = [
             PlayerState {
-                pos: p1_start-1,
+                pos: p1_start - 1,
                 score: 0,
             },
             PlayerState {
-                pos: p2_start-1,
+                pos: p2_start - 1,
                 score: 0,
-            }
+            },
         ];
 
         let mut universes = HashMap::new();
-        universes.insert(GameState {players}, 1);
+        universes.insert(GameState { players }, 1);
 
-        DiracDiceGame {
-            universes
-        }
+        DiracDiceGame { universes }
     }
 
     fn turn(&mut self, player_index: usize) -> u64 {
@@ -145,10 +133,13 @@ impl DiracDiceGame {
 }
 
 fn main() -> Result<()> {
-    let mut rng1 = Part1Rng { next: 1, counter: 0 };
+    let mut rng1 = Part1Rng {
+        next: 1,
+        counter: 0,
+    };
     let mut game = Game {
-        pos1: 8-1,
-        pos2: 9-1,
+        pos1: 8 - 1,
+        pos2: 9 - 1,
         score1: 0,
         score2: 0,
         target: 1000,
@@ -156,15 +147,16 @@ fn main() -> Result<()> {
 
     let (_winner, loser) = loop {
         if let Some(scores) = game.round(&mut rng1) {
-            break scores
+            break scores;
         }
     };
 
     println!("Part 1 {}", rng1.counter * loser);
 
     let mut dirac_dice = DiracDiceGame::new(8, 9);
-    let result = (0..21).map(|_| dirac_dice.round())
-        .fold((0,0), |(p, q), (x, y)| (p + x, q + y));
+    let result = (0..21)
+        .map(|_| dirac_dice.round())
+        .fold((0, 0), |(p, q), (x, y)| (p + x, q + y));
 
     let most_wins = result.0.max(result.1);
     println!("Part 2 {}", most_wins);

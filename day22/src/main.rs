@@ -1,9 +1,9 @@
+use anyhow::Result;
+use day22::{Cuboid, VolSet};
+use regex::Regex;
 use std::collections::HashSet;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
-use regex::Regex;
-use anyhow::Result;
-use day22::{Cuboid, VolSet};
 
 #[derive(Debug)]
 struct Step {
@@ -22,14 +22,16 @@ impl FromStr for Step {
             s[4..].split(",").collect()
         };
         let pat = Regex::new(r"(\w)=(-?\d+)..(-?\d+)").unwrap();
-        let ranges: Vec<_> = step_strs.iter()
+        let ranges: Vec<_> = step_strs
+            .iter()
             .map(|s| {
                 let caps = pat.captures(s).expect(s);
                 RangeInclusive::new(
                     caps[2].parse::<i32>().expect(&caps[1]),
                     caps[3].parse::<i32>().expect(&caps[1]),
                 )
-            }).collect();
+            })
+            .collect();
 
         Ok(Step {
             on,
@@ -37,13 +39,13 @@ impl FromStr for Step {
                 x: ranges[0].clone(),
                 y: ranges[1].clone(),
                 z: ranges[2].clone(),
-            }
+            },
         })
     }
 }
 
 struct Reactor {
-    on: HashSet<(i32, i32, i32)>
+    on: HashSet<(i32, i32, i32)>,
 }
 
 impl Reactor {
@@ -65,7 +67,7 @@ impl Reactor {
 fn main() -> Result<()> {
     let input: Vec<Step> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    let mut part1_reactor = Reactor {on : HashSet::new()};
+    let mut part1_reactor = Reactor { on: HashSet::new() };
     for step in input.iter().filter(|s| s.vol.part1()) {
         part1_reactor.do_step(step)
     }
