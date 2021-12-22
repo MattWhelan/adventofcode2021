@@ -1,31 +1,14 @@
 use std::collections::HashSet;
 use std::ops::RangeInclusive;
-use anyhow::Result;
 use std::str::FromStr;
 use regex::Regex;
+use anyhow::Result;
+use day22::{Cuboid, VolSet};
 
 #[derive(Debug)]
 struct Step {
     on: bool,
-    x: RangeInclusive<i32>,
-    y: RangeInclusive<i32>,
-    z: RangeInclusive<i32>,
-}
-
-impl Step {
-    fn iter<'a>(&'a self) -> impl Iterator<Item=(i32, i32, i32)> + 'a {
-        self.x.clone().flat_map(move |x| self.y.clone().flat_map(move |y| self.z.clone().map(move |z| (x, y, z))))
-    }
-
-    fn part1(&self) -> bool {
-        let bounds = -50..=50;
-        bounds.contains(self.x.start())
-            && bounds.contains(self.x.end())
-            && bounds.contains(self.y.start())
-            && bounds.contains(self.y.end())
-            && bounds.contains(self.z.start())
-            && bounds.contains(self.z.end())
-    }
+    vol: Cuboid,
 }
 
 impl FromStr for Step {
@@ -50,9 +33,11 @@ impl FromStr for Step {
 
         Ok(Step {
             on,
-            x: ranges[0].clone(),
-            y: ranges[1].clone(),
-            z: ranges[2].clone(),
+            vol: Cuboid {
+                x: ranges[0].clone(),
+                y: ranges[1].clone(),
+                z: ranges[2].clone(),
+            }
         })
     }
 }
@@ -64,9 +49,9 @@ struct Reactor {
 impl Reactor {
     fn do_step(&mut self, step: &Step) {
         if step.on {
-            self.on.extend(step.iter())
+            self.on.extend(step.vol.iter())
         } else {
-            step.iter().for_each(|cube| {
+            step.vol.iter().for_each(|cube| {
                 self.on.remove(&cube);
             })
         }
@@ -81,12 +66,29 @@ fn main() -> Result<()> {
     let input: Vec<Step> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
     let mut part1_reactor = Reactor {on : HashSet::new()};
-    for step in input.iter().filter(|s| s.part1()) {
+    for step in input.iter().filter(|s| s.vol.part1()) {
         part1_reactor.do_step(step)
     }
     println!("Part1: {}", part1_reactor.count());
 
+    let vol = build_volume(&input);
+    // high 1853271903083951
+    // high 1852753155409048
+    println!("Part2: {}", vol.volume());
+
     Ok(())
+}
+
+fn build_volume(steps: &[Step]) -> VolSet {
+    let mut vol: VolSet = VolSet::Simple(steps[0].vol.clone());
+    for step in steps[1..].iter() {
+        if step.on {
+            vol = vol.union(step.vol.clone());
+        } else {
+            vol = vol.subtract(step.vol.clone());
+        }
+    }
+    vol
 }
 
 const INPUT: &str = r#"on x=-26..26,y=-40..10,z=-12..42
