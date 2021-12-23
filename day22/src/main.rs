@@ -1,11 +1,10 @@
 use anyhow::Result;
 use day22::{Cuboid, VolSet};
 use regex::Regex;
-use std::collections::HashSet;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Step {
     on: bool,
     vol: Cuboid,
@@ -44,38 +43,14 @@ impl FromStr for Step {
     }
 }
 
-struct Reactor {
-    on: HashSet<(i32, i32, i32)>,
-}
-
-impl Reactor {
-    fn do_step(&mut self, step: &Step) {
-        if step.on {
-            self.on.extend(step.vol.iter())
-        } else {
-            step.vol.iter().for_each(|cube| {
-                self.on.remove(&cube);
-            })
-        }
-    }
-
-    fn count(&self) -> usize {
-        self.on.len()
-    }
-}
-
 fn main() -> Result<()> {
     let input: Vec<Step> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    let mut part1_reactor = Reactor { on: HashSet::new() };
-    for step in input.iter().filter(|s| s.vol.part1()) {
-        part1_reactor.do_step(step)
-    }
-    println!("Part1: {}", part1_reactor.count());
+    let part1_steps: Vec<_> = input.iter().filter(|s| s.vol.part1()).cloned().collect();
+    let part1_volume = build_volume(&part1_steps);
+    println!("Part1: {}", part1_volume.volume());
 
     let vol = build_volume(&input);
-    // high 1853271903083951
-    // high 1852753155409048
     println!("Part2: {}", vol.volume());
 
     Ok(())
