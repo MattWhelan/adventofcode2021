@@ -234,10 +234,12 @@ impl World {
         }
     }
 
-    fn room<'a>(&'a self, pos: &(usize, usize)) -> impl Iterator<Item = (usize, usize)> + 'a {
+    fn room<'a>(&'a self, pos: &'a (usize, usize)) -> impl Iterator<Item = (usize, usize)> + 'a {
         assert!(matches!(self.tile(pos), Tile::HOME(_)));
+        let y_bounds = 0..self.maze.grid.len();
 
-        self.maze.neighbors(pos)
+        (3..8).map(|y| (pos.0, y))
+            .filter(move |n| y_bounds.contains(&n.1))
             .filter(|n| matches!(self.tile(n), Tile::HOME(_)))
             .chain(once(*pos))
     }
@@ -284,7 +286,6 @@ impl World {
     }
 
     pub fn is_settled(&self) -> bool {
-        assert_eq!(8, self.pawns.len());
         self.pawns.iter()
             .all(|(pos, _)| self.pawn_matches_room(pos))
     }

@@ -5,19 +5,26 @@ use anyhow::Result;
 use day23::*;
 
 fn main() -> Result<()> {
-    let maze = TARGET.parse::<Maze>().unwrap();
-    let pawns: Vec<Pawn> = INPUT.parse::<Maze>().unwrap().pawns().collect();
+    {
+        let maze = TARGET_1.parse::<Maze>().unwrap();
+        let pawns: Vec<Pawn> = INPUT_1.parse::<Maze>().unwrap().pawns().collect();
 
-    let world = World::new(maze, pawns);
-    println!("\nPart 1: {}", part1(world).expect("Failed to solve"));
+        let world = World::new(maze, pawns);
+        println!("\nPart 1: {}", solve(world).expect("Failed to solve"));
+    }
+
+    {
+        let maze = TARGET_2.parse::<Maze>().unwrap();
+        let pawns: Vec<Pawn> = INPUT_2.parse::<Maze>().unwrap().pawns().collect();
+
+        let world = World::new(maze, pawns);
+        println!("\nPart 2: {}", solve(world).expect("Failed to solve"));
+    }
 
     Ok(())
 }
 
-// TODO: Strip cost tracking from pawn, so world state is just positions
-// TODO: Dijkstra on world state as nodes
-
-fn part1(world: World) -> Option<u32> {
+fn solve(world: World) -> Option<u32> {
     let distances = dijkstra(&world, |n| neighbors(n));
     distances.iter()
         .filter(|(w, _)| w.is_settled())
@@ -40,7 +47,7 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
         .fold(HashMap::new(), |mut acc, (color, h)| {
             // pick the furthest-in spot in the room
             if let Some(pos) = acc.get(&color) {
-                if world.neighbor_count(pos) > world.neighbor_count(&h) {
+                if pos.1 < h.1 {
                     acc.insert(color, h);
                 }
             } else {
@@ -117,14 +124,30 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
 }
 
 
-const INPUT: &str = r#"#############
+const INPUT_1: &str = r#"#############
 #...........#
 ###C#A#B#D###
   #B#A#D#C#
   #########"#;
 
-const TARGET: &str = r#"#############
+const TARGET_1: &str = r#"#############
 #...........#
 ###A#B#C#D###
+  #A#B#C#D#
+  #########"#;
+
+const INPUT_2: &str = r#"#############
+#...........#
+###C#A#B#D###
+  #D#C#B#A#
+  #D#B#A#C#
+  #B#A#D#C#
+  #########"#;
+
+const TARGET_2: &str = r#"#############
+#...........#
+###A#B#C#D###
+  #A#B#C#D#
+  #A#B#C#D#
   #A#B#C#D#
   #########"#;
