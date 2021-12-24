@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use itertools::Itertools;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum Color {
     A, B, C, D
 }
@@ -48,7 +48,7 @@ impl Display for Color {
     }
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Ord, PartialOrd, Hash, Eq, PartialEq)]
 pub struct Pawn {
     pub color: Color,
     start: (usize, usize),
@@ -63,7 +63,7 @@ impl Pawn {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Debug, Eq, Ord, PartialOrd, PartialEq, Hash, Copy, Clone)]
 pub enum Tile {
     WALL,
     HOME(Color),
@@ -93,7 +93,7 @@ impl Display for Tile {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Maze {
     grid: Vec<Vec<Tile>>,
 }
@@ -200,7 +200,7 @@ impl<Node> PartialOrd for VisitState<Node>
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct World {
     maze: Rc<Maze>,
     pawns: BTreeMap<(usize, usize), Pawn>,
@@ -279,7 +279,8 @@ impl World {
 
     pub fn path_dist(&self, start: &(usize, usize)) -> HashMap<(usize, usize), u32> {
         dijkstra(start, |pos|self.maze.neighbors(pos)
-            .filter(|n| self.is_vacant(n)))
+            .filter(|n| self.is_vacant(n))
+            .map(|n| (n, 1)))
     }
 
     pub fn is_settled(&self) -> bool {
@@ -332,7 +333,7 @@ impl Display for World {
     }
 }
 
-pub fn dijkstra<Node, It: Iterator<Item=Node>, NF: Fn(&Node) -> It>(start: &Node, neighbors: NF) -> HashMap<Node, u32>
+pub fn dijkstra<Node, It: Iterator<Item=(Node, u32)>, NF: Fn(&Node) -> It>(start: &Node, neighbors: NF) -> HashMap<Node, u32>
     where Node: Ord + Eq + PartialEq + Clone + Hash {
     let mut distance = HashMap::new();
     let mut visited = HashSet::new();
@@ -356,11 +357,10 @@ pub fn dijkstra<Node, It: Iterator<Item=Node>, NF: Fn(&Node) -> It>(start: &Node
             // Disconnected; some obstructions exist
             break;
         }
-        for n in neighbors(&current).filter(|n| !visited.contains(n)) {
+        for (n, cost) in neighbors(&current).filter(|(n, _cost)| !visited.contains(n)) {
             let d = distance.entry(n.clone()).or_insert(u32::MAX);
-            const COST: u32 = 1;
-            if *d > current_cost + COST {
-                *d = current_cost + COST;
+            if *d > current_cost + cost {
+                *d = current_cost + cost;
                 // prev.insert(n, current);
                 heap.push(VisitState { dist: *d, n })
             }
