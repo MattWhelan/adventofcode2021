@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, BTreeMap, HashMap, HashSet};
 use std::fmt::{Display, Formatter};
+use std::hash::Hash;
 use std::iter::once;
 use std::ops::Index;
 use std::rc::Rc;
@@ -50,7 +51,6 @@ impl Display for Color {
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Pawn {
     pub color: Color,
-    distance: u32,
     start: (usize, usize),
 }
 
@@ -58,7 +58,6 @@ impl Pawn {
     pub fn new(color: Color, pos: (usize, usize)) -> Pawn {
         Pawn {
             color,
-            distance: 0,
             start: pos,
         }
     }
@@ -179,20 +178,23 @@ impl Index<&(usize, usize)> for Maze {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-struct VisitState {
+struct VisitState<Node>
+where Node: Eq + PartialEq + Clone {
     dist: u32,
-    pos: (usize, usize),
+    n: Node,
 }
 
-impl Ord for VisitState {
+impl<Node> Ord for VisitState<Node>
+    where Node: Ord + Eq + PartialEq + Clone {
     fn cmp(&self, other: &Self) -> Ordering {
         other.dist.cmp(&self.dist)
-            .then_with(|| self.pos.cmp(&other.pos))
+            .then_with(|| self.n.cmp(&other.n))
     }
 }
 
 // `PartialOrd` needs to be implemented as well.
-impl PartialOrd for VisitState {
+impl<Node> PartialOrd for VisitState<Node>
+    where Node: Ord + Eq + PartialEq + Clone {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -261,12 +263,11 @@ impl World {
         }
     }
 
-    pub fn do_move(&mut self, from: &(usize, usize), to: &(usize, usize), distance: u32) {
+    pub fn do_move(&mut self, from: &(usize, usize), to: &(usize, usize)) {
         assert!(self.is_vacant(to));
         assert!(self.maze.is_open(to));
-        if let Some(mut p) = self.pawns.remove(from) {
+        if let Some(p) = self.pawns.remove(from) {
             if !self.pawns.contains_key(to) {
-                p.distance += distance;
                 self.pawns.insert(to.clone(), p);
             } else {
                 panic!("move to occupied space at to {:?}", to)
@@ -277,46 +278,8 @@ impl World {
     }
 
     pub fn path_dist(&self, start: &(usize, usize)) -> HashMap<(usize, usize), u32> {
-        let mut distance = HashMap::new();
-        let mut visited = HashSet::new();
-        // let mut prev = HashMap::new();
-
-        distance.insert(*start, 0);
-
-        let mut heap = BinaryHeap::new();
-        heap.push(VisitState {
-            dist: 0,
-            pos: *start,
-        });
-
-        while let Some(VisitState { dist, pos: current }) = heap.pop() {
-            let current_cost = distance[&current];
-            if dist > current_cost || visited.contains(&current) {
-                continue;
-            }
-
-            if current_cost == u32::MAX {
-                // Disconnected; some obstructions exist
-                break;
-            }
-            for n in self.maze.neighbors(&current)
-                .filter(|n| !visited.contains(n) && self.is_vacant(n)) {
-                let d = distance.entry(n).or_insert(u32::MAX);
-                const COST: u32 = 1;
-                if *d > current_cost + COST {
-                    *d = current_cost + COST;
-                    // prev.insert(n, current);
-                    heap.push(VisitState { dist: *d, pos: n })
-                }
-            }
-            visited.insert(current);
-        }
-
-        distance
-    }
-
-    pub fn total_cost(&self) -> u32 {
-        self.pawns.values().map(|p| p.distance * p.color.step_cost()).sum()
+        dijkstra(start, |pos|self.maze.neighbors(pos)
+            .filter(|n| self.is_vacant(n)))
     }
 
     pub fn is_settled(&self) -> bool {
@@ -367,4 +330,43 @@ impl Display for World {
         }
         Ok(())
     }
+}
+
+pub fn dijkstra<Node, It: Iterator<Item=Node>, NF: Fn(&Node) -> It>(start: &Node, neighbors: NF) -> HashMap<Node, u32>
+    where Node: Ord + Eq + PartialEq + Clone + Hash {
+    let mut distance = HashMap::new();
+    let mut visited = HashSet::new();
+    // let mut prev = HashMap::new();
+
+    distance.insert(start.clone(), 0);
+
+    let mut heap = BinaryHeap::new();
+    heap.push(VisitState {
+        dist: 0,
+        n: start.clone(),
+    });
+
+    while let Some(VisitState { dist, n: current }) = heap.pop() {
+        let current_cost = distance[&current];
+        if dist > current_cost || visited.contains(&current) {
+            continue;
+        }
+
+        if current_cost == u32::MAX {
+            // Disconnected; some obstructions exist
+            break;
+        }
+        for n in neighbors(&current).filter(|n| !visited.contains(n)) {
+            let d = distance.entry(n.clone()).or_insert(u32::MAX);
+            const COST: u32 = 1;
+            if *d > current_cost + COST {
+                *d = current_cost + COST;
+                // prev.insert(n, current);
+                heap.push(VisitState { dist: *d, n })
+            }
+        }
+        visited.insert(current);
+    }
+
+    distance
 }

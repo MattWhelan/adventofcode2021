@@ -7,14 +7,17 @@ fn main() -> Result<()> {
     let pawns: Vec<Pawn> = INPUT.parse::<Maze>().unwrap().pawns().collect();
 
     let world = World::new(maze, pawns);
-    println!("\nPart 1: {}", part1(world).expect("Failed to solve"));
+    println!("\nPart 1: {}", part1(world, 0).expect("Failed to solve"));
 
     Ok(())
 }
 
-fn part1(world: World) -> Option<u32> {
+// TODO: Strip cost tracking from pawn, so world state is just positions
+// TODO: Dijkstra on world state as nodes
+
+fn part1(world: World, cost: u32) -> Option<u32> {
     if world.is_settled() {
-        Some(world.total_cost())
+        Some(cost)
     } else {
         //println!("{}\n", &world);
         //if there are move-home moves, do those
@@ -62,8 +65,8 @@ fn part1(world: World) -> Option<u32> {
             move_homes.iter()
                 .filter_map(|(from, to, dist)| {
                     let mut w = world.clone();
-                    w.do_move(from, to, *dist);
-                    part1(w)
+                    w.do_move(from, to);
+                    part1(w, cost + *dist)
                 })
                 .min()
         } else {
@@ -90,8 +93,8 @@ fn part1(world: World) -> Option<u32> {
             move_outs.iter()
                 .filter_map(|(from, to, dist)| {
                     let mut w = world.clone();
-                    w.do_move(&from, &to, *dist);
-                    part1(w)
+                    w.do_move(&from, &to);
+                    part1(w, cost + dist)
                 })
                 .min()
         }
