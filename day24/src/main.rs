@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use anyhow::Result;
-use itertools::Either;
+use itertools::{Either, Itertools};
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 enum Reg {
@@ -32,7 +32,7 @@ impl FromStr for Reg {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 enum Instruction {
     INP(Reg),
     ADD(Reg, Either<i64, Reg>),
@@ -77,7 +77,7 @@ struct Alu {
 }
 
 impl Alu {
-    fn new() -> Alu {
+    pub fn new() -> Alu {
         Alu {
             reg: HashMap::from([
                 (Reg::W, 0),
@@ -86,6 +86,10 @@ impl Alu {
                 (Reg::Z, 0),
             ]),
         }
+    }
+
+    pub fn set(&mut self, reg: Reg, n: i64) {
+        self.reg.insert(reg, n);
     }
 
     fn right_val(&self, operand: &Either<i64, Reg>) -> i64 {
@@ -146,14 +150,89 @@ impl Alu {
 fn main() -> Result<()> {
     let program: Vec<Instruction> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    dbg!(&program);
-    let mut alu1 = Alu::new();
-    let result = alu1.validate(&program, &[0; 14]);
-    dbg!(result);
+    let sections: Vec<_> = program.split(|ins| *ins == Instruction::INP(Reg::W))
+        .filter(|s| !s.is_empty())
+        .collect();
+    {
+        let success_log = pick_lock(&sections, true);
+        let input_log = find_inputs(&sections, &success_log);
+    
+        //test it
+        {
+            let mut alu = Alu::new();
+            let z = alu.validate(&program, &input_log);
+            assert_eq!(0, z);
+        }
+        println!("Part1: {}", input_log.iter().map(|i| i.to_string()).join(""));
+    }
+    {
+        let success_log = pick_lock(&sections, false);
+        let input_log = find_inputs(&sections, &success_log);
+        println!("Part2: {}", input_log.iter().map(|i| i.to_string()).join(""));
+    }
 
     Ok(())
 }
 
+fn pick_lock(sections: &Vec<&[Instruction]>, get_max: bool) -> Vec<HashMap<i64, i64>> {
+    let mut targets = HashSet::new();
+    targets.insert(0);
+    let mut success_log = Vec::with_capacity(sections.len());
+    for section in sections.iter().rev() {
+        let successes = hack(section, &targets, get_max);
+        assert!(!successes.is_empty());
+        targets = successes.keys().copied().collect();
+        success_log.push(successes);
+        println!(".");
+    }
+    println!("\nPicked the lock.");
+    success_log.reverse();
+    success_log
+}
+
+fn find_inputs(sections: &Vec<&[Instruction]>, success_log: &Vec<HashMap<i64, i64>>) -> Vec<i64> {
+    let mut z = 0;
+    let mut input_log = Vec::new();
+    for (i, success_map) in success_log.iter().enumerate() {
+        let inp = success_map[&z];
+        input_log.push(inp);
+        let mut alu = Alu::new();
+        alu.set(Reg::Z, z);
+        alu.set(Reg::W, inp);
+        z = alu.validate(&sections[i], &[inp]);
+    }
+    input_log
+}
+
+fn hack(program: &[Instruction], targets: &HashSet<i64>, get_max: bool) -> HashMap<i64, i64> {
+    let mut success = HashMap::new();
+
+    let inputs: Vec<_> = if get_max {
+        (1..=9).rev().collect()
+    } else {
+        (1..=9).collect()
+    };
+
+    let z_limit = targets.iter().max().unwrap() * 50 + 50;
+    for z in 0..z_limit {
+        for inp in &inputs {
+            let mut alu = Alu::new();
+            alu.set(Reg::Z, z);
+            alu.set(Reg::W, *inp);
+            let result = alu.validate(program, &[*inp]);
+            if targets.contains(&result) {
+                success.insert(z, *inp);
+                break;
+            }
+        }
+    }
+
+    success
+}
+
+//Notes: w is only written for input
+//x and y are cleared before use in each section
+//z is the only register that survives across inputs.
 const INPUT: &str = r#"inp w
 mul x 0
 add x z
