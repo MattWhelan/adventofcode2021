@@ -1,16 +1,19 @@
+use itertools::Itertools;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::iter::once;
 use std::ops::Index;
 use std::rc::Rc;
 use std::str::FromStr;
-use itertools::Itertools;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum Color {
-    A, B, C, D
+    A,
+    B,
+    C,
+    D,
 }
 
 impl Color {
@@ -56,10 +59,7 @@ pub struct Pawn {
 
 impl Pawn {
     pub fn new(color: Color, pos: (usize, usize)) -> Pawn {
-        Pawn {
-            color,
-            start: pos,
-        }
+        Pawn { color, start: pos }
     }
 }
 
@@ -67,7 +67,7 @@ impl Pawn {
 pub enum Tile {
     WALL,
     HOME(Color),
-    HALL
+    HALL,
 }
 
 impl From<char> for Tile {
@@ -77,7 +77,7 @@ impl From<char> for Tile {
             '.' => Tile::HALL,
             ch if ch.is_uppercase() => Tile::HOME(ch.into()),
             ' ' => Tile::WALL,
-            _ => panic!("unexpected char {}", ch)
+            _ => panic!("unexpected char {}", ch),
         }
     }
 }
@@ -87,7 +87,7 @@ impl Display for Tile {
         let ch = match self {
             Tile::WALL => '#',
             Tile::HOME(_) => '_',
-            Tile::HALL => '.'
+            Tile::HALL => '.',
         };
         write!(f, "{}", ch)
     }
@@ -102,31 +102,31 @@ impl FromStr for Maze {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let grid = s.lines()
-            .map(|l| l.chars()
-                .map(|ch| ch.into())
-                .collect()
-            )
+        let grid = s
+            .lines()
+            .map(|l| l.chars().map(|ch| ch.into()).collect())
             .collect();
-        Ok(Maze {
-            grid
-        })
+        Ok(Maze { grid })
     }
 }
 
 impl Maze {
     pub fn pawns<'a>(&'a self) -> impl Iterator<Item = Pawn> + 'a {
-        self.grid.iter().enumerate()
-            .flat_map(|(y, row)| row.iter().enumerate()
-                .filter_map(move |(x, t)| if let Tile::HOME(c) = t {
+        self.grid.iter().enumerate().flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, t)| {
+                if let Tile::HOME(c) = t {
                     Some(Pawn::new(*c, (x, y)))
                 } else {
                     None
-                })
-            )
+                }
+            })
+        })
     }
 
-    pub fn neighbors<'a>(&'a self, (x, y): &(usize, usize)) -> impl Iterator<Item = (usize, usize)> + 'a {
+    pub fn neighbors<'a>(
+        &'a self,
+        (x, y): &(usize, usize),
+    ) -> impl Iterator<Item = (usize, usize)> + 'a {
         let x_range = 0..self.grid[0].len() as isize;
         let y_range = 0..self.grid.len() as isize;
         let x = *x as isize;
@@ -154,17 +154,16 @@ impl Maze {
         match self[pos] {
             Tile::WALL => false,
             Tile::HOME(_) => false,
-            Tile::HALL => {
-                self.neighbors(pos).count() > 2
-            },
+            Tile::HALL => self.neighbors(pos).count() > 2,
         }
     }
 
-    fn homes<'a>(&'a self) -> impl Iterator<Item=(usize, usize)> + 'a{
-        self.grid.iter().enumerate()
-            .flat_map(|(y, row)| row.iter().enumerate()
-                .map(move |(x, t)| ((x,y), t)))
-            .filter(|(_,t)| matches!(t, Tile::HOME(_)))
+    fn homes<'a>(&'a self) -> impl Iterator<Item = (usize, usize)> + 'a {
+        self.grid
+            .iter()
+            .enumerate()
+            .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, t)| ((x, y), t)))
+            .filter(|(_, t)| matches!(t, Tile::HOME(_)))
             .map(|(p, _)| p)
     }
 }
@@ -179,22 +178,30 @@ impl Index<&(usize, usize)> for Maze {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 struct VisitState<Node>
-where Node: Eq + PartialEq + Clone {
+where
+    Node: Eq + PartialEq + Clone,
+{
     dist: u32,
     n: Node,
 }
 
 impl<Node> Ord for VisitState<Node>
-    where Node: Ord + Eq + PartialEq + Clone {
+where
+    Node: Ord + Eq + PartialEq + Clone,
+{
     fn cmp(&self, other: &Self) -> Ordering {
-        other.dist.cmp(&self.dist)
+        other
+            .dist
+            .cmp(&self.dist)
             .then_with(|| self.n.cmp(&other.n))
     }
 }
 
 // `PartialOrd` needs to be implemented as well.
 impl<Node> PartialOrd for VisitState<Node>
-    where Node: Ord + Eq + PartialEq + Clone {
+where
+    Node: Ord + Eq + PartialEq + Clone,
+{
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -238,7 +245,8 @@ impl World {
         assert!(matches!(self.tile(pos), Tile::HOME(_)));
         let y_bounds = 0..self.maze.grid.len();
 
-        (3..8).map(|y| (pos.0, y))
+        (3..8)
+            .map(|y| (pos.0, y))
             .filter(move |n| y_bounds.contains(&n.1))
             .filter(|n| matches!(self.tile(n), Tile::HOME(_)))
             .chain(once(*pos))
@@ -280,13 +288,17 @@ impl World {
     }
 
     pub fn path_dist(&self, start: &(usize, usize)) -> HashMap<(usize, usize), u32> {
-        dijkstra(start, |pos|self.maze.neighbors(pos)
-            .filter(|n| self.is_vacant(n))
-            .map(|n| (n, 1)))
+        dijkstra(start, |pos| {
+            self.maze
+                .neighbors(pos)
+                .filter(|n| self.is_vacant(n))
+                .map(|n| (n, 1))
+        })
     }
 
     pub fn is_settled(&self) -> bool {
-        self.pawns.iter()
+        self.pawns
+            .iter()
             .all(|(pos, _)| self.pawn_matches_room(pos))
     }
 
@@ -294,9 +306,8 @@ impl World {
         &self.pawns
     }
 
-    pub fn find_ready_homes<'a>(&'a self) -> impl Iterator<Item=(usize, usize)> + 'a{
-        self.maze.homes()
-            .filter(|h| self.is_ready_home(h))
+    pub fn find_ready_homes<'a>(&'a self) -> impl Iterator<Item = (usize, usize)> + 'a {
+        self.maze.homes().filter(|h| self.is_ready_home(h))
     }
 
     pub fn tile(&self, pos: &(usize, usize)) -> Tile {
@@ -304,8 +315,10 @@ impl World {
     }
 
     pub fn is_pawn_settled_at(&self, pos: &(usize, usize)) -> bool {
-        self.pawn_matches_room(pos) && self.room(pos)
-            .all(|place| self.is_vacant(&place) || self.pawn_matches_room(&place))
+        self.pawn_matches_room(pos)
+            && self
+                .room(pos)
+                .all(|place| self.is_vacant(&place) || self.pawn_matches_room(&place))
     }
 
     pub fn blocks_doorway(&self, pos: &(usize, usize)) -> bool {
@@ -334,8 +347,13 @@ impl Display for World {
     }
 }
 
-pub fn dijkstra<Node, It: Iterator<Item=(Node, u32)>, NF: Fn(&Node) -> It>(start: &Node, neighbors: NF) -> HashMap<Node, u32>
-    where Node: Ord + Eq + PartialEq + Clone + Hash {
+pub fn dijkstra<Node, It: Iterator<Item = (Node, u32)>, NF: Fn(&Node) -> It>(
+    start: &Node,
+    neighbors: NF,
+) -> HashMap<Node, u32>
+where
+    Node: Ord + Eq + PartialEq + Clone + Hash,
+{
     let mut distance = HashMap::new();
     let mut visited = HashSet::new();
     // let mut prev = HashMap::new();

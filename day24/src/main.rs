@@ -79,12 +79,7 @@ struct Alu {
 impl Alu {
     pub fn new() -> Alu {
         Alu {
-            reg: HashMap::from([
-                (Reg::W, 0),
-                (Reg::X, 0),
-                (Reg::Y, 0),
-                (Reg::Z, 0),
-            ]),
+            reg: HashMap::from([(Reg::W, 0), (Reg::X, 0), (Reg::Y, 0), (Reg::Z, 0)]),
         }
     }
 
@@ -99,7 +94,7 @@ impl Alu {
         }
     }
 
-    fn exec<It: Iterator<Item=i64>>(&mut self, ins: &Instruction, input_it: &mut It) {
+    fn exec<It: Iterator<Item = i64>>(&mut self, ins: &Instruction, input_it: &mut It) {
         match ins {
             Instruction::INP(left) => {
                 let val = input_it.next().unwrap();
@@ -150,25 +145,32 @@ impl Alu {
 fn main() -> Result<()> {
     let program: Vec<Instruction> = INPUT.lines().map(|l| l.parse().unwrap()).collect();
 
-    let sections: Vec<_> = program.split(|ins| *ins == Instruction::INP(Reg::W))
+    let sections: Vec<_> = program
+        .split(|ins| *ins == Instruction::INP(Reg::W))
         .filter(|s| !s.is_empty())
         .collect();
     {
         let success_log = pick_lock(&sections, true);
         let input_log = find_inputs(&sections, &success_log);
-    
+
         //test it
         {
             let mut alu = Alu::new();
             let z = alu.validate(&program, &input_log);
             assert_eq!(0, z);
         }
-        println!("Part1: {}", input_log.iter().map(|i| i.to_string()).join(""));
+        println!(
+            "Part1: {}",
+            input_log.iter().map(|i| i.to_string()).join("")
+        );
     }
     {
         let success_log = pick_lock(&sections, false);
         let input_log = find_inputs(&sections, &success_log);
-        println!("Part2: {}", input_log.iter().map(|i| i.to_string()).join(""));
+        println!(
+            "Part2: {}",
+            input_log.iter().map(|i| i.to_string()).join("")
+        );
     }
 
     Ok(())

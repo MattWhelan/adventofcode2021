@@ -26,7 +26,8 @@ fn main() -> Result<()> {
 
 fn solve(world: World) -> Option<u32> {
     let distances = dijkstra(&world, |n| neighbors(n));
-    distances.iter()
+    distances
+        .iter()
         .filter(|(w, _)| w.is_settled())
         .min_by_key(|(_, d)| *d)
         .map(|(w, cost)| {
@@ -35,14 +36,17 @@ fn solve(world: World) -> Option<u32> {
         })
 }
 
-fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
+fn neighbors(world: &World) -> impl Iterator<Item = (World, u32)> {
     //println!("{}\n", &world);
     //if there are move-home moves, do those
-    let ready_homes: HashMap<Color, (usize, usize)> = world.find_ready_homes()
-        .map(|h| if let Tile::HOME(color) = world.tile(&h) {
-            (color, h)
-        } else {
-            unreachable!()
+    let ready_homes: HashMap<Color, (usize, usize)> = world
+        .find_ready_homes()
+        .map(|h| {
+            if let Tile::HOME(color) = world.tile(&h) {
+                (color, h)
+            } else {
+                unreachable!()
+            }
         })
         .fold(HashMap::new(), |mut acc, (color, h)| {
             // pick the furthest-in spot in the room
@@ -58,7 +62,9 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
     let move_homes: Vec<_> = if ready_homes.is_empty() {
         Vec::new()
     } else {
-        world.pawns().iter()
+        world
+            .pawns()
+            .iter()
             .filter_map(move |(pawn_pos, pawn)| {
                 if let Tile::HALL = world.tile(pawn_pos) {
                     if let Some(ready_home_pos) = ready_homes.get(&pawn.color) {
@@ -80,7 +86,8 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
     };
 
     if !move_homes.is_empty() {
-        move_homes.iter()
+        move_homes
+            .iter()
             .map(move |(from, to, dist)| {
                 let mut w = world.clone();
                 w.do_move(from, to);
@@ -92,7 +99,9 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
         //no move-homes, do a move-out
 
         //find unsettled pawns
-        let move_outs: Vec<_> = world.pawns().iter()
+        let move_outs: Vec<_> = world
+            .pawns()
+            .iter()
             .filter(|(pawn_pos, _)| {
                 if let Tile::HOME(_) = world.tile(pawn_pos) {
                     !world.is_pawn_settled_at(pawn_pos)
@@ -112,7 +121,8 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
                     })
             })
             .collect();
-        move_outs.iter()
+        move_outs
+            .iter()
             .map(move |(from, to, dist)| {
                 let mut w = world.clone();
                 w.do_move(&from, &to);
@@ -122,7 +132,6 @@ fn neighbors(world: &World) -> impl Iterator<Item=(World, u32)> {
             .into_iter()
     }
 }
-
 
 const INPUT_1: &str = r#"#############
 #...........#
