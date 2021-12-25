@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use itertools::{Either, Itertools};
+use rayon::prelude::*;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 enum Reg {
@@ -181,7 +182,7 @@ fn pick_lock(sections: &Vec<&[Instruction]>, get_max: bool) -> Vec<HashMap<i64, 
     targets.insert(0);
     let mut success_log = Vec::with_capacity(sections.len());
     for section in sections.iter().rev() {
-        let successes = hack(section, &targets, get_max);
+        let successes = solve_segment(section, &targets, get_max);
         assert!(!successes.is_empty());
         targets = successes.keys().copied().collect();
         success_log.push(successes);
@@ -206,9 +207,11 @@ fn find_inputs(sections: &Vec<&[Instruction]>, success_log: &Vec<HashMap<i64, i6
     input_log
 }
 
-fn hack(program: &[Instruction], targets: &HashSet<i64>, get_max: bool) -> HashMap<i64, i64> {
-    let mut success = HashMap::new();
-
+fn solve_segment(
+    program: &[Instruction],
+    targets: &HashSet<i64>,
+    get_max: bool,
+) -> HashMap<i64, i64> {
     let inputs: Vec<_> = if get_max {
         (1..=9).rev().collect()
     } else {
@@ -216,20 +219,25 @@ fn hack(program: &[Instruction], targets: &HashSet<i64>, get_max: bool) -> HashM
     };
 
     let z_limit = targets.iter().max().unwrap() * 50 + 50;
-    for z in 0..z_limit {
-        for inp in &inputs {
-            let mut alu = Alu::new();
-            alu.set(Reg::Z, z);
-            alu.set(Reg::W, *inp);
-            let result = alu.validate(program, &[*inp]);
-            if targets.contains(&result) {
-                success.insert(z, *inp);
-                break;
-            }
-        }
-    }
-
-    success
+    (0..z_limit)
+        .into_par_iter()
+        .filter_map(|z| {
+            inputs
+                .iter()
+                .filter_map(|inp| {
+                    let mut alu = Alu::new();
+                    alu.set(Reg::Z, z);
+                    alu.set(Reg::W, *inp);
+                    let result = alu.validate(program, &[*inp]);
+                    if targets.contains(&result) {
+                        Some((z, *inp))
+                    } else {
+                        None
+                    }
+                })
+                .next()
+        })
+        .collect()
 }
 
 //Notes: w is only written for input
